@@ -45,8 +45,46 @@ class Game {
 
     showTooltip(text) {
         const tooltip = document.getElementById('tooltip');
+        if (!tooltip || !text) return;
+
+        // テキストの内容を更新
         tooltip.innerHTML = text;
         tooltip.style.display = 'block';
+
+        // マウスまたはタップの最新座標を取得するイベントリスナーから位置を特定
+        const updatePos = (e) => {
+            const gap = 15;
+            let x = e.clientX + gap;
+            let y = e.clientY + gap;
+
+            // ツールチップ自体のサイズを取得
+            const rect = tooltip.getBoundingClientRect();
+
+            // 右端からはみ出す場合の補正
+            if (x + rect.width > window.innerWidth) {
+                x = window.innerWidth - rect.width - gap;
+            }
+
+            // 下端からはみ出す場合の補正
+            if (y + rect.height > window.innerHeight) {
+                y = window.innerHeight - rect.height - gap;
+            }
+
+            // 負の値（左端・上端）にならないようガード
+            x = Math.max(gap, x);
+            y = Math.max(gap, y);
+
+            tooltip.style.left = x + 'px';
+            tooltip.style.top = y + 'px';
+        };
+
+        // 呼び出し時の現在のマウス位置に合わせるため、一度だけイベントを模倣するか、
+        // mousemove 等のグローバルな位置情報に依存させる必要があります。
+        // 最も確実なのは、イベントが発生した瞬間の座標を使うことですが、
+        // 既存の呼び出し元を変えない場合は window.event を参照します。
+        if (window.event) {
+            updatePos(window.event);
+        }
     }
 
     hideTooltip() {
