@@ -217,8 +217,9 @@ class Game {
 
     startFloor() {
         this.battleActive = true;
-        const enemyData = ENEMIES[Math.min(ENEMIES.length - 1, Math.floor((this.floor - 1) / 2))];
-        const scale = 1 + (this.floor - 1) * 0.2;
+        // 変更点：敵のリストが増えたため、出現頻度を調整し、スケーリングを滑らか(0.2 -> 0.08)に変更
+        const enemyData = ENEMIES[Math.min(ENEMIES.length - 1, Math.floor((this.floor - 1) / 1))];
+        const scale = 1 + (this.floor - 1) * 0.08;
         
         this.enemy = {
             name: enemyData.name,
