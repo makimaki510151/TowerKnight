@@ -564,8 +564,6 @@ class Game {
             case 'buff':
                 const isRegen = skill.effectType === 'regen';
                 const statName = skill.stat ? skill.stat.toUpperCase() : '継続回復';
-
-                // 修正：regenの値を数値にキャスト
                 const effectValue = isRegen ? (Number(skill.effectVal) || 0) : (Number(skill.amount) || 0);
 
                 this.applyStatus(
@@ -574,7 +572,9 @@ class Game {
                     skill.stat,
                     effectValue,
                     skill.duration,
-                    skill.name
+                    skill.name,
+                    null, // subType
+                    !isRegen // buffかつregenでないなら倍率として扱うフラグ
                 );
                 msg += ` ${statName}付与！`;
                 break;
@@ -600,15 +600,15 @@ class Game {
     }
 
     // ステータス適用の汎用関数
-    applyStatus(target, type, stat, value, duration, name, subType = null) {
-        // 重複チェック（同名スキル効果は更新）
+    applyStatus(target, type, stat, value, duration, name, subType = null, isPercent = false) {
         const existing = target.statusEffects.find(e => e.name === name && e.type === type);
         if (existing) {
             existing.duration = duration;
             existing.value = value;
+            existing.isPercent = isPercent; // 追加
         } else {
             target.statusEffects.push({
-                type, stat, value, duration, name, subType
+                type, stat, value, duration, name, subType, isPercent // 追加
             });
         }
     }
@@ -657,27 +657,31 @@ class Game {
 
     // 現在のバフ・デバフ込みステータスを計算
     calcCurrentStats(unit) {
-        // 基礎値からスタート
         let atk = unit.atk;
         let def = unit.def;
         let sup = unit.sup;
 
-        // --- 追加：遺物・呪物による常時ステータス補正を加算 ---
         unit.relics.concat(unit.cursedRelics).forEach(item => {
             if (item.stats) {
                 if (item.stats.atk) atk += item.stats.atk;
                 if (item.stats.def) def += item.stats.def;
                 if (item.stats.sup) sup += item.stats.sup;
-                // 注: maxHpは獲得時に unit.maxHp 自体を書き換える運用のためここでは計算不要
             }
         });
 
-        // バフ・デバフの適用
         unit.statusEffects.forEach(ef => {
             if (ef.type === 'buff' || ef.type === 'debuff') {
-                if (ef.stat === 'atk') atk = this.applyStatMod(atk, ef.value);
-                if (ef.stat === 'def') def = this.applyStatMod(def, ef.value);
-                if (ef.stat === 'sup') sup = this.applyStatMod(sup, ef.value);
+                let mod = ef.value;
+                // フラグがある場合、または絶対値が小さい場合は倍率として計算
+                if (ef.isPercent) {
+                    if (ef.stat === 'atk') atk *= (1 + mod);
+                    if (ef.stat === 'def') def *= (1 + mod);
+                    if (ef.stat === 'sup') sup *= (1 + mod);
+                } else {
+                    if (ef.stat === 'atk') atk += mod;
+                    if (ef.stat === 'def') def += mod;
+                    if (ef.stat === 'sup') sup += mod;
+                }
             }
         });
 
@@ -798,11 +802,21 @@ class Game {
         controls.style.display = 'block';
         btn.innerText = "報酬を受け取る";
         btn.onclick = () => {
+            // ステータスのリセット
             this.player.maxHp += 5;
             this.player.hp = this.player.maxHp;
             this.player.atk += 1;
             this.player.sup += 1;
             this.player.def += 1;
+
+            // 一時的な状態異常とシールドのリセット
+            this.player.statusEffects = this.player.statusEffects.filter(ef => ef.permanent);
+            this.player.shield = 0;
+            this.player.shieldDuration = 0;
+
+            // 表示を即座に更新する
+            this.updateUI();
+
             this.showRewards();
         };
     }
@@ -880,8 +894,6 @@ class Game {
                 name: '威力強化',
                 desc: '威力係数+20%',
                 action: () => {
-                    // 修正前: skill.power = (skill.power + 0.2).toFixed(1); (文字列になる)
-                    // 修正後: 数値として計算し、浮動小数点の誤差を丸める
                     skill.power = Math.round((Number(skill.power) + 0.2) * 10) / 10;
                     skill.level++;
                 }
@@ -895,6 +907,18 @@ class Game {
                 }
             },
         ];
+
+        // 初動遅延短縮（0より大きい場合のみ追加）
+        if (skill.initialDelay && skill.initialDelay > 0) {
+            upgrades.push({
+                name: '初動短縮',
+                desc: '初動遅延-0.1秒',
+                action: () => {
+                    skill.initialDelay = Math.max(0, skill.initialDelay - 100);
+                    skill.level++;
+                }
+            });
+        }
 
         // シールドやバフなら効果量アップなども
         if (skill.effectVal) upgrades.push({ name: '効果量強化', desc: '効果量+5', action: () => { skill.effectVal += 5; skill.level++; } });
