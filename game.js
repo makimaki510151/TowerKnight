@@ -325,17 +325,17 @@ class Game {
 
     startFloor() {
         this.battleActive = true;
-        // 敵の生成
+
+        // ログをクリアし、確認ボタンを隠す
+        document.getElementById('battle-log').innerHTML = '';
+        document.getElementById('battle-post-controls').style.display = 'none';
+
         const enemyData = ENEMIES[Math.min(ENEMIES.length - 1, Math.floor((this.floor - 1) / 2))];
         const scale = 1 + (this.floor - 1) * 0.08;
 
         const enemySkills = enemyData.skills.map(id => {
             const base = SKILLS.find(s => s.id === id);
-            if (base) {
-                return { ...base, level: 1, extraCd: 0, extraDelay: 0 };
-            } else {
-                return { id: id, name: id, type: 'attack', power: 1.0, cd: 3000, level: 1 };
-            }
+            return base ? { ...base, level: 1, extraCd: 0, extraDelay: 0 } : { id: id, name: id, type: 'attack', power: 1.0, cd: 3000, level: 1 };
         });
 
         this.enemy = this.createUnit(enemyData.name,
@@ -346,18 +346,12 @@ class Game {
             enemySkills
         );
 
-        // プレイヤー状態リセット
         this.player.shield = 0;
         this.player.statusEffects = this.player.statusEffects.filter(ef => ef.permanent);
-
         this.initSkillStates();
 
-        // --- 修正点: 敵のスキル表示をリセット ---
         const enemySkillContainer = document.getElementById('enemy-skills');
-        if (enemySkillContainer) {
-            enemySkillContainer.innerHTML = '';
-        }
-        // ------------------------------------
+        if (enemySkillContainer) enemySkillContainer.innerHTML = '';
 
         this.log(`Floor ${this.floor}: ${this.enemy.name} が現れた！`);
         this.showScreen('battle-screen');
@@ -481,7 +475,7 @@ class Game {
             const selfDmg = Math.floor(actor.maxHp * skill.selfDmg);
             actor.hp -= selfDmg;
             this.showFloatingText(side === 'player' ? 'player-unit' : 'enemy-unit', selfDmg, 'damage');
-            msg += ` 代償に${selfDmg}dmg！`;
+            msg += ` 代償に${selfDmg}ダメージ！`;
         }
         if (skill.selfDebuff) {
             this.applyStatus(actor, 'debuff', skill.selfDebuff.stat, skill.selfDebuff.amount, skill.duration, '反動');
@@ -748,13 +742,20 @@ class Game {
 
     victory() {
         this.log(`${this.enemy.name} を倒した！`);
-        this.player.maxHp += 5;
-        this.player.hp = this.player.maxHp;
-        // 基礎ステータス微増
-        this.player.atk += 1;
-        this.player.sup += 1;
-        this.player.def += 1;
-        setTimeout(() => this.showRewards(), 1000);
+
+        const btn = document.getElementById('battle-confirm-btn');
+        const controls = document.getElementById('battle-post-controls');
+
+        controls.style.display = 'block';
+        btn.innerText = "報酬を受け取る";
+        btn.onclick = () => {
+            this.player.maxHp += 5;
+            this.player.hp = this.player.maxHp;
+            this.player.atk += 1;
+            this.player.sup += 1;
+            this.player.def += 1;
+            this.showRewards();
+        };
     }
 
     generateRandomReward() {
@@ -962,8 +963,12 @@ class Game {
         const log = document.getElementById('battle-log');
         const div = document.createElement('div');
         div.innerText = msg;
-        log.prepend(div);
-        if (log.children.length > 50) log.lastChild.remove();
+        log.appendChild(div); // appendに変更
+
+        // 最新のログが見えるように末尾へスクロール
+        log.scrollTop = log.scrollHeight;
+
+        if (log.children.length > 100) log.firstChild.remove();
     }
 
     showFloatingText(targetId, text, type) {
@@ -987,15 +992,24 @@ class Game {
     }
 
     gameOver() {
-        const screen = document.getElementById('gameover-screen');
-        screen.innerHTML = `
-            <h1 class="gameover-title">GAME OVER</h1>
-            <div class="gameover-stats">
-                <span>到達フロア: <b class="stat-value">${this.floor}</b></span>
-            </div>
-            <button onclick="location.reload()" class="main-btn">タイトルへ戻る</button>
-        `;
-        this.showScreen('gameover-screen');
+        this.log(`あなたは力尽きた...`);
+
+        const btn = document.getElementById('battle-confirm-btn');
+        const controls = document.getElementById('battle-post-controls');
+
+        controls.style.display = 'block';
+        btn.innerText = "リザルトを確認";
+        btn.onclick = () => {
+            const screen = document.getElementById('gameover-screen');
+            screen.innerHTML = `
+                <h1 class="gameover-title">GAME OVER</h1>
+                <div class="gameover-stats">
+                    <span>到達フロア: <b class="stat-value">${this.floor}</b></span>
+                </div>
+                <button onclick="location.reload()" class="main-btn">タイトルへ戻る</button>
+            `;
+            this.showScreen('gameover-screen');
+        };
     }
 
     showScreen(id) {

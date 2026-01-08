@@ -1,112 +1,122 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Auto Battle Roguelike - Warehouse Update</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-<div id="game-container">
-    <!-- Status Bar -->
-    <div id="status-bar" style="display: none;">
-        <div>Floor: <span id="floor-display" class="stat-value">1</span></div>
-        <div id="player-stats-summary">
-            体力: <span id="hp-display" class="stat-value">100/100</span> | 
-            攻撃: <span id="atk-display" class="stat-value">10</span> | 
-            支援: <span id="sup-display" class="stat-value">5</span> | 
-            防御: <span id="def-display" class="stat-value">5</span>
-        </div>
-    </div>
-
-    <!-- Title Screen -->
-    <div id="title-screen" class="screen active">
-        <div class="title-content">
-            <h1 class="game-title">塔のナイト</h1>
-            <p class="game-subtitle">技を整え、深淵へ挑め</p>
-            <button onclick="game.startGame()" class="main-btn">塔を登る</button>
-        </div>
-    </div>
-
-    <!-- Battle Screen -->
-    <div id="battle-screen" class="screen">
-        <div class="battle-area">
-            <div id="player-unit" class="unit-card">
-                <div class="unit-name">Player</div>
-                <div class="bar-container"><div id="player-hp-fill" class="bar-fill hp-bar"></div></div>
-                <div id="player-hp-text">100 / 100</div>
-                <div id="player-skills" class="skill-slots"></div>
-            </div>
-
-            <div class="vs-text">VS</div>
-
-            <div id="enemy-unit" class="unit-card">
-                <div id="enemy-name" class="unit-name">Enemy</div>
-                <div class="bar-container"><div id="enemy-hp-fill" class="bar-fill hp-bar"></div></div>
-                <div id="enemy-hp-text">100 / 100</div>
-                <div id="enemy-skills" class="skill-slots"></div>
+    <div id="game-container">
+        <!-- Status Bar -->
+        <div id="status-bar" style="display: none;">
+            <div>Floor: <span id="floor-display" class="stat-value">1</span></div>
+            <div id="player-stats-summary">
+                体力: <span id="hp-display" class="stat-value">100/100</span> |
+                攻撃: <span id="atk-display" class="stat-value">10</span> |
+                支援: <span id="sup-display" class="stat-value">5</span> |
+                防御: <span id="def-display" class="stat-value">5</span>
             </div>
         </div>
-        <div id="battle-log" class="battle-log"></div>
-    </div>
 
-    <!-- Warehouse (Strategy) Screen -->
-    <div id="strategy-screen" class="screen">
-        <h2>倉庫</h2>
-        <p class="screen-desc">技の調整と所持品の確認</p>
-        
-        <div class="warehouse-layout">
-            <div class="timeline-container">
-                <div class="timeline-header" id="timeline-header">
-                    <!-- Time markers injected here -->
+        <!-- Title Screen -->
+        <div id="title-screen" class="screen active">
+            <div class="title-content">
+                <h1 class="game-title">塔のナイト</h1>
+                <p class="game-subtitle">技を整え、深淵へ挑め</p>
+                <button onclick="game.startGame()" class="main-btn">塔を登る</button>
+            </div>
+        </div>
+
+        <!-- Battle Screen -->
+        <div id="battle-screen" class="screen">
+            <div class="battle-area">
+                <div id="player-unit" class="unit-card">
+                    <div class="unit-name">Player</div>
+                    <div class="bar-container">
+                        <div id="player-hp-fill" class="bar-fill hp-bar"></div>
+                    </div>
+                    <div id="player-hp-text">100 / 100</div>
+                    <div id="player-skills" class="skill-slots"></div>
                 </div>
-                <div id="skill-timeline" class="timeline-body">
-                    <!-- Timeline bars and sliders will be injected here -->
+
+                <div class="vs-text">VS</div>
+
+                <div id="enemy-unit" class="unit-card">
+                    <div id="enemy-name" class="unit-name">Enemy</div>
+                    <div class="bar-container">
+                        <div id="enemy-hp-fill" class="bar-fill hp-bar"></div>
+                    </div>
+                    <div id="enemy-hp-text">100 / 100</div>
+                    <div id="enemy-skills" class="skill-slots"></div>
                 </div>
             </div>
+            <div id="battle-log" class="battle-log"></div>
+            <div id="battle-post-controls" style="display: none; margin-top: 15px; text-align: center;">
+                <button id="battle-confirm-btn" class="main-btn" style="padding: 10px 30px;">次へ進む</button>
+            </div>
+        </div>
 
-            <div class="inventory-container">
-                <h3>所持遺物・呪物</h3>
-                <div id="inventory-list" class="inventory-list scrollable">
-                    <!-- Relics and Curses will be injected here -->
+        <!-- Warehouse (Strategy) Screen -->
+        <div id="strategy-screen" class="screen">
+            <h2>倉庫</h2>
+            <p class="screen-desc">技の調整と所持品の確認</p>
+
+            <div class="warehouse-layout">
+                <div class="timeline-container">
+                    <div class="timeline-header" id="timeline-header">
+                        <!-- Time markers injected here -->
+                    </div>
+                    <div id="skill-timeline" class="timeline-body">
+                        <!-- Timeline bars and sliders will be injected here -->
+                    </div>
+                </div>
+
+                <div class="inventory-container">
+                    <h3>所持遺物・呪物</h3>
+                    <div id="inventory-list" class="inventory-list scrollable">
+                        <!-- Relics and Curses will be injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="strategy-actions">
+                <button onclick="game.startFloor()" class="main-btn">戦闘開始</button>
+            </div>
+        </div>
+
+        <!-- Reward Screen -->
+        <div id="reward-screen" class="screen">
+            <h2>勝利！報酬を選択してください</h2>
+            <div id="reward-list" class="reward-list scrollable"></div>
+        </div>
+
+        <!-- Upgrade Selection Modal -->
+        <div id="upgrade-modal" class="modal">
+            <div class="modal-content">
+                <h3 id="upgrade-title">技の強化</h3>
+                <p id="upgrade-desc">強化項目を選択してください</p>
+                <div id="upgrade-options" class="upgrade-options">
+                    <!-- Options will be injected here -->
                 </div>
             </div>
         </div>
 
-        <div class="strategy-actions">
-            <button onclick="game.startFloor()" class="main-btn">戦闘開始</button>
+        <!-- Game Over Screen -->
+        <div id="gameover-screen" class="screen">
+            <!-- Content injected by JS -->
         </div>
     </div>
 
-    <!-- Reward Screen -->
-    <div id="reward-screen" class="screen">
-        <h2>勝利！報酬を選択してください</h2>
-        <div id="reward-list" class="reward-list scrollable"></div>
-    </div>
+    <!-- Tooltip -->
+    <div id="tooltip" class="tooltip"></div>
 
-    <!-- Upgrade Selection Modal -->
-    <div id="upgrade-modal" class="modal">
-        <div class="modal-content">
-            <h3 id="upgrade-title">技の強化</h3>
-            <p id="upgrade-desc">強化項目を選択してください</p>
-            <div id="upgrade-options" class="upgrade-options">
-                <!-- Options will be injected here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Game Over Screen -->
-    <div id="gameover-screen" class="screen">
-        <!-- Content injected by JS -->
-    </div>
-</div>
-
-<!-- Tooltip -->
-<div id="tooltip" class="tooltip"></div>
-
-<!-- Scripts -->
-<script src="data.js"></script>
-<script src="game.js"></script>
+    <!-- Scripts -->
+    <script src="data.js"></script>
+    <script src="game.js"></script>
 </body>
+
 </html>
