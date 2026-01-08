@@ -313,6 +313,7 @@ class Game {
             if (item.stats.atk) effects.push(`攻撃力+${item.stats.atk}`);
             if (item.stats.def) effects.push(`防御力+${item.stats.def}`);
             if (item.stats.sup) effects.push(`支援力+${item.stats.sup}`);
+            if (item.stats.hp) effects.push(`最大HP+${item.stats.hp}`);
             if (item.stats.maxHp) effects.push(`最大HP+${item.stats.maxHp}`);
         }
 
@@ -947,6 +948,12 @@ class Game {
             });
         }
 
+        // 遺物のstatsにhpが含まれている場合、maxHpを増加させる
+        if (item.stats && item.stats.hp) {
+            this.player.maxHp += item.stats.hp;
+            this.player.hp += item.stats.hp; // 現在のHPも増加分だけ回復させる
+        }
+
         // 最大HPの割合変化（硝子の大砲など）がある場合は、基礎最大HPを調整
         if (item.statsRaw && item.statsRaw.maxHp) {
             this.player.maxHp = Math.floor(this.player.maxHp * item.statsRaw.maxHp);
@@ -963,10 +970,20 @@ class Game {
 
         const upgrades = [
             {
-                name: '威力強化',
-                desc: '威力係数+20%',
+                name: skill.type === 'shield' ? '耐久強化' : (skill.type === 'heal' ? '回復強化' : '威力強化'),
+                desc: (skill.type === 'shield' || skill.type === 'heal' || skill.type === 'dot') ? '効果量+20%' : '威力係数+20%',
                 action: () => {
-                    skill.power = Math.round((Number(skill.power) + 0.2) * 10) / 10;
+                    if (skill.type === 'shield' || skill.type === 'heal') {
+                        // 実数値スキルの場合は20%増加
+                        skill.power = Math.floor(Number(skill.power) * 1.2);
+                    } else if (skill.type === 'dot') {
+                        // DoTスキルの場合は直接攻撃係数と継続ダメージの両方を強化
+                        skill.power = Math.round((Number(skill.power) + 0.1) * 10) / 10;
+                        if (skill.effectVal) skill.effectVal = Math.floor(skill.effectVal * 1.2);
+                    } else {
+                        // 通常攻撃スキルの場合は係数を+0.2
+                        skill.power = Math.round((Number(skill.power) + 0.2) * 10) / 10;
+                    }
                     skill.level++;
                 }
             },
