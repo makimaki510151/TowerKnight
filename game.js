@@ -164,12 +164,16 @@ class Game {
 
         allRelics.forEach(item => {
             const div = document.createElement('div');
-            div.className = `inventory-item ${item.special ? 'curse-item' : 'relic-item'}`;
-            div.innerText = item.name[0]; // 頭文字を表示
+            // クラス名の判定を修正（item.specialの有無などデータ構造に合わせる）
+            const isCurse = item.special && (item.special.selfDmgTick || item.special.healingBan || item.special.cdIncrease);
+            div.className = `inventory-item ${isCurse ? 'curse' : 'relic'}`;
 
-            div.onmouseover = (e) => {
-                // ここを item.desc から this.getRelicDetail(item) に変更
-                this.showTooltip(e, this.getRelicDetail(item));
+            // 表示名を1文字目ではなく名前に
+            div.innerText = item.name;
+
+            div.onmouseover = () => {
+                // 第1引数の e を削除し、テキストのみを渡すように修正
+                this.showTooltip(this.getRelicDetail(item));
             };
             div.onmouseout = () => this.hideTooltip();
             list.appendChild(div);
@@ -180,36 +184,49 @@ class Game {
         const totalCd = this.getSkillCd(skill, this.player);
         const totalDelay = (skill.initialDelay || 0) + (skill.extraDelay || 0);
 
+        // レベルに応じた補正値を計算（強化処理のロジックと合わせる）
+        // ※showUpgradeModal での強化内容を反映させるため、現在の値をそのまま表示に使用します。
+
         let detail = `<b>${skill.name}</b> (Lv.${skill.level})<br>`;
 
-        // 動的な定型文生成
         let desc = "";
         switch (skill.type) {
             case 'attack':
-                desc = `${skill.power}倍の威力で攻撃します。`;
-                if (skill.debuff) desc += `命中時、敵の${skill.debuff.stat.toUpperCase()}を${Math.abs(skill.debuff.amount)}${Math.isInteger(skill.debuff.amount) ? '' : '%'}${skill.debuff.amount > 0 ? '上昇' : '低下'}させます。`;
+                // レベルによる威力補正は useSkill 内の powerMult と同様の計算、または現在の power を表示
+                desc = `${skill.power.toFixed(1)}倍の威力で攻撃します。`;
+                if (skill.debuff) {
+                    desc += `命中時、敵の${skill.debuff.stat.toUpperCase()}を${Math.abs(skill.debuff.amount)}${Number.isInteger(skill.debuff.amount) ? '' : '%'}${skill.debuff.amount > 0 ? '上昇' : '低下'}させます。`;
+                }
                 break;
             case 'shield':
                 desc = `${skill.power}の耐久値を持つシールドを展開します。`;
                 break;
             case 'heal':
-                desc = `HPを${skill.power}回復します（支援力で増加）。`;
+                // 支援力ボーナス計算を簡易表示
+                desc = `HPを基本値${skill.power}回復します（支援力で増加）。`;
                 break;
             case 'buff':
-                desc = `${skill.duration / 1000}秒間、${skill.stat.toUpperCase()}を${skill.amount * 100}%上昇させます。`;
+                desc = `${skill.duration / 1000}秒間、${skill.stat ? skill.stat.toUpperCase() : 'ステータス'}を${Math.round(skill.amount * 100)}%上昇させます。`;
                 break;
             case 'debuff':
-                desc = `${skill.duration / 1000}秒間、敵の${skill.stat.toUpperCase()}を${Math.abs(skill.amount * 100)}%低下させます。`;
+                desc = `${skill.duration / 1000}秒間、敵の${skill.stat ? skill.stat.toUpperCase() : 'ステータス'}を${Math.abs(Math.round(skill.amount * 100))}%低下させます。`;
                 break;
             case 'dot':
                 desc = `${skill.duration / 1000}秒間、毎秒${skill.effectVal}の継続ダメージを与えます。`;
                 break;
         }
 
-        if (skill.selfDmg) desc += `<br><span class="stat-down">【代償】最大HPの${skill.selfDmg * 100}%を消費します。</span>`;
+        if (skill.selfDmg) desc += `<br><span class="stat-down">【代償】最大HPの${Math.round(skill.selfDmg * 100)}%を消費します。</span>`;
         if (skill.selfDebuff) desc += `<br><span class="stat-down">【反動】自身の${skill.selfDebuff.stat.toUpperCase()}が低下します。</span>`;
 
-        detail += `<span class="detail">${desc}</span><br>`;
+        let specialNotes = "";
+        this.player.relics.concat(this.player.cursedRelics).forEach(relic => {
+            if (relic.special && relic.special.randomDelay) {
+                specialNotes += `<br><span style="color:var(--curse-color)">【${relic.name}】発動時に最大 ${relic.special.randomDelay / 1000}s のランダム遅延が発生。</span>`;
+            }
+        });
+
+        detail += `<span class="detail">${desc}${specialNotes}</span><br>`;
         detail += `CT: ${(totalCd / 1000).toFixed(1)}s / 初動: ${(totalDelay / 1000).toFixed(1)}s<br>`;
 
         return detail;
@@ -814,16 +831,35 @@ class Game {
             div.className = 'reward-item';
 
             let color = 'var(--skill-color)';
-            if (reward.type === 'relic') color = 'var(--relic-color)';
-            if (reward.type === 'curse') color = 'var(--curse-color)';
+            let typeLabel = '技';
+            if (reward.type === 'relic') {
+                color = 'var(--relic-color)';
+                typeLabel = '遺物';
+            }
+            if (reward.type === 'curse') {
+                color = 'var(--curse-color)';
+                typeLabel = '呪物';
+            }
 
-            const detail = reward.type === 'skill' ?
-                this.getSkillDetail(reward.data) :
-                this.getRelicDetail(reward.data);
+            // 詳細テキストの取得
+            let detail = '';
+            if (reward.type === 'skill') {
+                // スキルデータには必ずtypeが含まれるため、toUpperCaseのエラーを防げる
+                detail = this.getSkillDetail(reward.data);
+            } else {
+                // 遺物・呪物の場合（data.jsのdescを表示し、statsがあれば付記する）
+                detail = reward.data.desc || '';
+                if (reward.data.stats) {
+                    const statsInfo = Object.entries(reward.data.stats)
+                        .map(([k, v]) => `${k.toUpperCase()}+${v}`)
+                        .join(', ');
+                    detail += ` (${statsInfo})`;
+                }
+            }
 
             div.innerHTML = `
                 <div class="reward-info">
-                    <div class="reward-type" style="color: ${color}">${reward.type.toUpperCase()}</div>
+                    <div class="reward-type" style="color: ${color}">${typeLabel}</div>
                     <div class="reward-name">${reward.data.name} ${reward.isUpgrade ? '(強化)' : ''}</div>
                     <div class="reward-description">${detail}</div>
                 </div>
@@ -834,12 +870,12 @@ class Game {
                 this.claimReward(reward);
             };
 
-            // ツールチップ表示用（既存の仕組みを維持）
             div.onmouseenter = () => this.showTooltip(detail);
             div.onmouseleave = () => this.hideTooltip();
 
             rewardList.appendChild(div);
         });
+
         this.showScreen('reward-screen');
     }
 
