@@ -1050,151 +1050,124 @@ class Game {
         const rewardList = document.getElementById('reward-list');
         rewardList.innerHTML = '';
 
-        // 現在の所持品を表示するセクションを追加
+        // --- 現在の所持品セクション ---
         const currentItemsDiv = document.createElement('div');
-        currentItemsDiv.style.cssText = 'background: rgba(0,0,0,0.5); padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #555;';
+        currentItemsDiv.className = 'current-assets-section';
+        currentItemsDiv.style.cssText = 'background: rgba(20, 20, 20, 0.8); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #444; text-align: left;';
 
-        let currentItemsHTML = '<h4 style="margin-top: 0; color: var(--accent-color);">現在の所持品</h4>';
+        let currentItemsHTML = '<h4 style="margin: 0 0 12px 0; color: var(--accent-color); border-bottom: 1px solid #444; padding-bottom: 5px; font-size: 0.9em; letter-spacing: 0.05em;">現在の所持品 (マウスオーバーで詳細)</h4>';
+        currentItemsHTML += '<div style="display: flex; flex-direction: column; gap: 10px;">';
 
-        // スキル一覧
+        // 所持スキル
         if (this.player.skills.length > 0) {
-            currentItemsHTML += '<div style="margin-bottom: 10px;"><b style="color: var(--skill-color);">技 (' + this.player.skills.length + '/6)</b><br>';
-            this.player.skills.forEach(skill => {
-                currentItemsHTML += `<span style="font-size: 0.85em; display: inline-block; background: #333; padding: 4px 8px; border-radius: 3px; margin: 2px; border-left: 3px solid var(--skill-color);">${skill.name} Lv.${skill.level}</span>`;
-            });
-            currentItemsHTML += '</div>';
+            currentItemsHTML += '<div><b style="color: var(--skill-color); font-size: 0.8em; display: block; margin-bottom: 4px;">技 (' + this.player.skills.length + '/6)</b><div class="asset-tags-container" id="current-skills-tags"></div></div>';
         }
 
-        // 遺物一覧
-        if (this.player.relics.length > 0) {
-            currentItemsHTML += '<div style="margin-bottom: 10px;"><b style="color: var(--relic-color);">遺物 (' + this.player.relics.length + '個)</b><br>';
-            this.player.relics.forEach(relic => {
-                currentItemsHTML += `<span style="font-size: 0.85em; display: inline-block; background: #333; padding: 4px 8px; border-radius: 3px; margin: 2px; border-left: 3px solid var(--relic-color);">${relic.name}</span>`;
-            });
+        // 所持遺物・呪物
+        const hasRelics = this.player.relics.length > 0;
+        const hasCurses = this.player.cursedRelics.length > 0;
+        if (hasRelics || hasCurses) {
+            currentItemsHTML += '<div style="display: flex; gap: 15px;">';
+            if (hasRelics) {
+                currentItemsHTML += '<div style="flex: 1;"><b style="color: var(--relic-color); font-size: 0.8em; display: block; margin-bottom: 4px;">遺物</b><div class="asset-tags-container" id="current-relics-tags"></div></div>';
+            }
+            if (hasCurses) {
+                currentItemsHTML += '<div style="flex: 1;"><b style="color: var(--curse-color); font-size: 0.8em; display: block; margin-bottom: 4px;">呪物</b><div class="asset-tags-container" id="current-curses-tags"></div></div>';
+            }
             currentItemsHTML += '</div>';
         }
-
-        // 呪物一覧
-        if (this.player.cursedRelics.length > 0) {
-            currentItemsHTML += '<div><b style="color: var(--curse-color);">呪物 (' + this.player.cursedRelics.length + '個)</b><br>';
-            this.player.cursedRelics.forEach(curse => {
-                currentItemsHTML += `<span style="font-size: 0.85em; display: inline-block; background: #333; padding: 4px 8px; border-radius: 3px; margin: 2px; border-left: 3px solid var(--curse-color);">${curse.name}</span>`;
-            });
-            currentItemsHTML += '</div>';
-        }
+        currentItemsHTML += '</div>';
 
         currentItemsDiv.innerHTML = currentItemsHTML;
         rewardList.appendChild(currentItemsDiv);
-        const rewards = [];
 
-        // 出現制限と重複管理用
+        // タグの動的生成とツールチップ紐付け
+        const createTag = (text, color, detail) => {
+            const span = document.createElement('span');
+            span.style.cssText = `font-size: 0.75em; display: inline-block; background: #2a2a2a; padding: 3px 8px; border-radius: 4px; margin: 2px; border-left: 3px solid ${color}; cursor: help; white-space: nowrap;`;
+            span.innerText = text;
+            span.onmouseenter = () => this.showTooltip(detail);
+            span.onmouseleave = () => this.hideTooltip();
+            return span;
+        };
+
+        const skillTags = currentItemsDiv.querySelector('#current-skills-tags');
+        if (skillTags) this.player.skills.forEach(s => skillTags.appendChild(createTag(`${s.name} Lv.${s.level}`, 'var(--skill-color)', this.getSkillDetail(s))));
+
+        const relicTags = currentItemsDiv.querySelector('#current-relics-tags');
+        if (relicTags) this.player.relics.forEach(r => relicTags.appendChild(createTag(r.name, 'var(--relic-color)', this.getRelicDetail(r))));
+
+        const curseTags = currentItemsDiv.querySelector('#current-curses-tags');
+        if (curseTags) this.player.cursedRelics.forEach(c => curseTags.appendChild(createTag(c.name, 'var(--curse-color)', this.getRelicDetail(c))));
+
+        // --- 報酬選択セクション ---
+        const rewardsHeaderDiv = document.createElement('div');
+        rewardsHeaderDiv.style.cssText = 'color: var(--accent-color); font-weight: bold; margin-bottom: 12px; font-size: 1.1em; text-shadow: 0 0 10px rgba(255,215,0,0.3);';
+        rewardsHeaderDiv.innerText = '獲得する報酬を選択してください';
+        rewardList.appendChild(rewardsHeaderDiv);
+
+        const rewards = [];
         let relicCount = 0;
         let curseCount = 0;
         const selectedRewardIds = new Set();
+        const isSkillLimit = this.player.skills.length >= 6;
 
-        // 追加：現在のプレイヤーの技の数を確認
-        const currentSkillCount = this.player.skills.length;
-        const isSkillLimit = currentSkillCount >= 6;
-
-        // 報酬スロットが6個埋まるまでループ
         while (rewards.length < 6) {
             const r = Math.random();
             let reward = null;
-
             if (r < 0.6) {
-                // スキル：全SKILLSから抽選
                 const skillTemplate = SKILLS[Math.floor(Math.random() * SKILLS.length)];
                 if (selectedRewardIds.has(skillTemplate.id)) continue;
-
                 const existing = this.player.skills.find(s => s.id === skillTemplate.id);
-
-                // 修正：既に持っているスキルの「強化」は出現させるが、
-                // 上限に達している場合は「未習得のスキル」をスキップする
                 if (!existing && isSkillLimit) continue;
-
-                reward = {
-                    type: 'skill',
-                    data: existing ? { ...existing } : { ...skillTemplate, level: 1 },
-                    isUpgrade: !!existing
-                };
+                reward = { type: 'skill', data: existing ? { ...existing } : { ...skillTemplate, level: 1 }, isUpgrade: !!existing };
                 selectedRewardIds.add(skillTemplate.id);
             } else if (r < 0.85) {
-                // 遺物：最大1つまで
                 if (relicCount >= 1) continue;
                 const relicData = RELICS[Math.floor(Math.random() * RELICS.length)];
                 if (selectedRewardIds.has(relicData.id)) continue;
-
                 reward = { type: 'relic', data: relicData };
                 selectedRewardIds.add(relicData.id);
                 relicCount++;
             } else {
-                // 呪物：最大1つまで
                 if (curseCount >= 1) continue;
                 const curseData = CURSED_RELICS[Math.floor(Math.random() * CURSED_RELICS.length)];
                 if (selectedRewardIds.has(curseData.id)) continue;
-
                 reward = { type: 'curse', data: curseData };
                 selectedRewardIds.add(curseData.id);
                 curseCount++;
             }
-
             if (reward) rewards.push(reward);
         }
 
-        // 報酬セクションの見出しを追加
-        const rewardsHeaderDiv = document.createElement('div');
-        rewardsHeaderDiv.style.cssText = 'color: var(--accent-color); font-weight: bold; margin-bottom: 10px; font-size: 1.1em;';
-        rewardsHeaderDiv.innerText = '報酬を選択してください';
-        rewardList.appendChild(rewardsHeaderDiv);
+        const itemsContainer = document.createElement('div');
+        itemsContainer.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr; gap: 10px;';
+        rewardList.appendChild(itemsContainer);
 
         rewards.forEach(reward => {
             const div = document.createElement('div');
             div.className = 'reward-item';
+            div.style.margin = '0'; // グリッドで管理するためマージンをリセット
 
             let color = 'var(--skill-color)';
             let typeLabel = '技';
-            if (reward.type === 'relic') {
-                color = 'var(--relic-color)';
-                typeLabel = '遺物';
-            }
-            if (reward.type === 'curse') {
-                color = 'var(--curse-color)';
-                typeLabel = '呪物';
-            }
-
-            // 詳細テキストの取得
             let detail = '';
-            if (reward.type === 'skill') {
-                // スキルデータには必ずtypeが含まれるため、toUpperCaseのエラーを防げる
-                detail = this.getSkillDetail(reward.data);
-            } else {
-                // 遺物・呪物の場合（data.jsのdescを表示し、statsがあれば付記する）
-                detail = reward.data.desc || '';
-                if (reward.data.stats) {
-                    const statsInfo = Object.entries(reward.data.stats)
-                        .map(([k, v]) => `${k.toUpperCase()}+${v}`)
-                        .join(', ');
-                    detail += ` (${statsInfo})`;
-                }
-            }
+
+            if (reward.type === 'relic') { color = 'var(--relic-color)'; typeLabel = '遺物'; detail = this.getRelicDetail(reward.data); }
+            else if (reward.type === 'curse') { color = 'var(--curse-color)'; typeLabel = '呪物'; detail = this.getRelicDetail(reward.data); }
+            else { detail = this.getSkillDetail(reward.data); }
 
             div.innerHTML = `
-                <div class="reward-info">
-                    <div class="reward-type" style="color: ${color}">${typeLabel}</div>
-                    <div class="reward-name">${reward.data.name} ${reward.isUpgrade ? '(強化)' : ''}</div>
-                    <div class="reward-description">${detail}</div>
+                <div class="reward-info" style="text-align: left;">
+                    <div class="reward-type" style="color: ${color}; font-size: 0.7em; text-transform: uppercase;">${typeLabel}</div>
+                    <div class="reward-name" style="font-size: 0.95em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${reward.data.name}${reward.isUpgrade ? ' (+)' : ''}</div>
                 </div>
             `;
 
-            div.onclick = () => {
-                this.hideTooltip();
-                this.claimReward(reward);
-            };
-
+            div.onclick = () => { this.hideTooltip(); this.claimReward(reward); };
             div.onmouseenter = () => this.showTooltip(detail);
             div.onmouseleave = () => this.hideTooltip();
-
-            rewardList.appendChild(div);
+            itemsContainer.appendChild(div);
         });
 
         this.showScreen('reward-screen');
