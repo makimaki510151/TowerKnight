@@ -331,7 +331,10 @@ class Game {
             if (item.special.healingBan) effects.push(`回復無効`);
             if (item.special.randomDelay) effects.push(`発動遅延(最大${(item.special.randomDelay / 1000).toFixed(1)}s)`);
             if (item.special.defZero) effects.push(`防御力強制0`);
-            if (item.special.maxHpReduc) effects.push(`開始時HP-${Math.round(item.special.maxHpReduc * 100)}%`);
+            if (item.special.maxHpReduc) {
+                const startHpPercent = Math.round((1 - item.special.maxHpReduc) * 100);
+                effects.push(`開始時HP ${startHpPercent}% (最大HPの${Math.round(item.special.maxHpReduc * 100)}%減少)`);
+            }
             if (item.special.cheatDeath) effects.push(`死亡回避(1回)`);
             if (item.special.breakOnUse) effects.push(`発動時全遺物消滅`);
         }
@@ -458,19 +461,31 @@ class Game {
         unit.statusEffects.forEach(ef => {
             if (ef.type === 'dot') {
                 const dmg = Math.max(1, ef.value);
-                // ログ出力を追加
                 this.log(`${unit.name}は${ef.name}で${dmg}ダメージ！`);
                 this.applyDirectDamage(unit, dmg, 'dot');
+
+                // 追加：DoTダメージに対する吸血処理
+                // unit（ダメージを受けた側）ではない方（actor）がプレイヤーか敵かを判定
+                const actor = unit === this.player ? this.enemy : this.player;
+                const lifesteal = this.checkSpecial(actor, 'lifesteal');
+
+                if (lifesteal && !this.checkSpecial(actor, 'healingBan')) {
+                    const healAmt = Math.floor(dmg * lifesteal);
+                    if (healAmt > 0) {
+                        actor.hp = Math.min(actor.maxHp, actor.hp + healAmt);
+                        const side = actor === this.player ? 'player-unit' : 'enemy-unit';
+                        this.showFloatingText(side, healAmt, 'heal');
+                        this.log(`${actor.name}はDoTの吸血により ${healAmt} 回復！`);
+                    }
+                }
             } else if (ef.type === 'regen') {
                 if (this.checkSpecial(unit, 'healingBan')) return;
 
                 const healAmt = ef.value;
                 unit.hp = Math.min(unit.maxHp, unit.hp + healAmt);
-                // ログ出力を追加
                 this.log(`${unit.name}は${ef.name}で${healAmt}回復！`);
                 this.showFloatingText(unit === this.player ? 'player-unit' : 'enemy-unit', healAmt, 'heal');
             } else if (ef.special === 'selfDmgTick') {
-                // 呪物による自傷ダメージのログ
                 this.log(`${unit.name}は${ef.name}の呪いで${ef.value}ダメージ！`);
                 this.applyDirectDamage(unit, ef.value, 'curse');
             }
@@ -542,20 +557,20 @@ class Game {
                 const currentLevel = Number(skill.level) || 1;
                 const powerMult = basePower + ((currentLevel - 1) * 0.1);
 
-                // ステータスが正常に取得できているか確認しつつ計算
                 let rawDmg = (Number(stats.atk) || 0) * powerMult;
                 let targetDef = Number(targetStats.def) || 0;
                 let damage = Math.max(1, Math.floor(rawDmg - targetDef));
 
-                // もし damage が NaN になった場合の最終ガード
                 if (isNaN(damage)) damage = 1;
 
                 const lifesteal = this.checkSpecial(actor, 'lifesteal');
                 if (lifesteal) {
                     const heal = Math.floor(damage * lifesteal);
-                    if (!this.checkSpecial(actor, 'healingBan')) {
+                    if (!this.checkSpecial(actor, 'healingBan') && heal > 0) {
                         actor.hp = Math.min(actor.maxHp, actor.hp + heal);
                         this.showFloatingText(side === 'player' ? 'player-unit' : 'enemy-unit', heal, 'heal');
+                        // 追加：回復のログ出力
+                        this.log(`${actor.name}は攻撃で ${heal} 回復した！`);
                     }
                 }
 
@@ -611,9 +626,11 @@ class Game {
             case 'debuff':
                 if (skill.stat === 'cd') {
                     // 敵の全スキルのlastUsedを減らすことで、実質的にCTを増加させる
+                    // 修正：lastUsedを減らすと経過時間(now - lastUsed)が増えてCTが早く終わってしまうため、
+                    // 正しくはlastUsedを増やす（過去に遡るのではなく未来にずらす）必要がある。
                     const targetStates = this.skillStates[side === 'player' ? 'enemy' : 'player'];
                     targetStates.forEach(state => {
-                        state.lastUsed -= skill.amount;
+                        state.lastUsed += skill.amount;
                     });
                     msg += ` 敵の全CTを増加！`;
                 } else {

@@ -44,24 +44,24 @@ const SKILLS = [
 ];
 
 const RELICS = [
-    { id: 'warrior_ring', name: '戦士の指輪', stats: { atk: 3, def: 1 }, desc: '攻撃と防御がわずかに上昇。' },
-    { id: 'light_feather', name: '軽い羽根', stats: { def: 1 }, special: { cdReduc: 100 }, desc: '防御が上がり、全スキルのCTが0.1秒短縮。' },
-    { id: 'heavy_gauntlet', name: '重い手甲', stats: { atk: 5, def: 5 }, desc: '攻防が上昇する。' },
-    { id: 'vampire_tooth', name: '吸血の牙', stats: { atk: 1 }, special: { lifesteal: 0.1 }, desc: '攻撃力が上がり、与ダメージの10%を回復。' },
-    { id: 'scholar_glasses', name: '学者の眼鏡', stats: { sup: 8, atk: 1 }, desc: '支援力と攻撃力が上がる。' },
-    { id: 'turtle_shell', name: '亀の甲羅', stats: { def: 8, hp: 10 }, desc: '防御力とHPが上昇する。' },
-    { id: 'hero_cloak', name: '勇者のマント', stats: { atk: 10, def: 10, hp: 50 }, desc: '伝説の勇者が纏ったとされるマント。全体的な能力が向上する。' },
-    { id: 'wisdom_orb', name: '知恵の宝珠', special: { cdReduc: 300, sup: 15 }, desc: 'スキルの回転率を上げ、支援力を大幅に高める。' }
+    { id: 'warrior_ring', name: '戦士の指輪', stats: { atk: 5, def: 2 }, desc: '攻撃と防御が上昇。' },
+    { id: 'light_feather', name: '軽い羽根', stats: { def: 2 }, special: { cdReduc: 200 }, desc: '防御が上がり、全スキルのCTが0.2秒短縮。' },
+    { id: 'heavy_gauntlet', name: '重い手甲', stats: { atk: 8, def: 8 }, desc: '攻防が大きく上昇する。' },
+    { id: 'vampire_tooth', name: '吸血の牙', stats: { atk: 3 }, special: { lifesteal: 0.15 }, desc: '攻撃力が上がり、与ダメージの15%を回復。' },
+    { id: 'scholar_glasses', name: '学者の眼鏡', stats: { sup: 12, atk: 2 }, desc: '支援力と攻撃力が上がる。' },
+    { id: 'turtle_shell', name: '亀の甲羅', stats: { def: 12, hp: 20 }, desc: '防御力とHPが上昇する。' },
+    { id: 'hero_cloak', name: '勇者のマント', stats: { atk: 15, def: 15, hp: 80 }, desc: '伝説の勇者が纏ったとされるマント。全体的な能力が向上する。' },
+    { id: 'wisdom_orb', name: '知恵の宝珠', stats: { sup: 20 }, special: { cdReduc: 400 }, desc: 'スキルの回転率を上げ、支援力を大幅に高める。' }
 ];
 
 const CURSED_RELICS = [
-    { id: 'demon_muscle', name: '鬼神の筋肉', stats: { atk: 20 }, special: { selfDmgTick: 2 }, desc: '攻撃力が劇的に上昇するが、毎秒2ダメージ受ける。' },
-    { id: 'glass_cannon', name: '硝子の大砲', stats: { atk: 30 }, statsRaw: { maxHp: 0.5 }, desc: '攻撃力が極大化するが、最大HPが半分になる（適用時）。' },
-    { id: 'cursed_clock', name: '狂った時計', special: { cdReduc: 500, randomDelay: 1000 }, desc: 'CTが0.5秒短縮されるが、発動時にランダムで最大1秒遅延する。' },
-    { id: 'blood_pact', name: '血の契約', stats: { sup: 30 }, special: { healingBan: true }, desc: '支援力が圧倒的になるが、通常回復が無効化される(DoT等は受ける)。' },
-    { id: 'sloth_statue', name: '怠惰の像', stats: { def: 20, maxHp: 50 }, special: { cdIncrease: 1000 }, desc: '耐久力が跳ね上がるが、行動速度が著しく低下する。' },
-    { id: 'berserker_soul', name: '狂戦士の魂', stats: { atk: 50 }, special: { defZero: true }, desc: '攻撃力が爆発的に上昇するが、防御力が強制的に0になる。' },
-    { id: 'eternal_famine', name: '永劫の飢餓', special: { lifesteal: 0.3, maxHpReduc: 0.7 }, desc: '高い吸血能力を得るが、最大HPが30%の状態からスタートする。' },
+    { id: 'demon_muscle', name: '鬼神の筋肉', stats: { atk: 35 }, special: { selfDmgTick: 4 }, desc: '攻撃力が劇的に上昇するが、毎秒4ダメージ受ける。' },
+    { id: 'glass_cannon', name: '硝子の大砲', stats: { atk: 50 }, statsRaw: { maxHp: 0.4 }, desc: '攻撃力が極大化するが、最大HPが40%になる。' },
+    { id: 'cursed_clock', name: '狂った時計', special: { cdReduc: 800, randomDelay: 1200 }, desc: 'CTが0.8秒短縮されるが、発動時にランダムで最大1.2秒遅延する。' },
+    { id: 'blood_pact', name: '血の契約', stats: { sup: 45 }, special: { healingBan: true }, desc: '支援力が圧倒的になるが、通常回復が無効化される。' },
+    { id: 'sloth_statue', name: '怠惰の像', stats: { def: 35, maxHp: 100 }, special: { cdIncrease: 1500 }, desc: '耐久力が跳ね上がるが、行動速度が著しく低下する。' },
+    { id: 'berserker_soul', name: '狂戦士の魂', stats: { atk: 80 }, special: { defZero: true }, desc: '攻撃力が爆発的に上昇するが、防御力が強制的に0になる。' },
+    { id: 'eternal_famine', name: '永劫の飢餓', special: { lifesteal: 0.4, maxHpReduc: 0.8 }, desc: '高い吸血能力を得るが、最大HPが20%の状態からスタートする。' },
     { id: 'sacrifice_pawn', name: '身代わりの駒', special: { cheatDeath: 1, breakOnUse: true }, desc: '一度だけ死亡を回避できるが、発動時に全ての装備中の遺物が消滅する。' }
 ];
 
