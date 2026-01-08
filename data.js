@@ -81,6 +81,10 @@ const ENEMIES = [
     { name: 'カースメイジ', hp: 200, atk: 18, def: 8, skills: ['ignite', 'intimidate', 'break_armor'] }, // DoT & デバフ
     { name: 'ゴーレム', hp: 400, atk: 30, def: 20, skills: ['heavy_slam', 'iron_wall'] },
 
+    { name: 'キマイラ', hp: 600, atk: 35, def: 15, skills: ['slash', 'poison_blade', 'ignite'] }, // 複合属性アタッカー
+    { name: 'デスナイト', hp: 800, atk: 42, def: 25, skills: ['heavy_slam', 'break_armor', 'soul_drain'] }, // 高耐久・吸収持ち
+    { name: '古代の機械竜', hp: 1000, atk: 48, def: 35, skills: ['iron_wall', 'quick_stab', 'heavy_slam'] }, // ドラゴンへの前哨戦
+
     // ボス級
     { name: 'ドラゴン', hp: 1200, atk: 55, def: 25, skills: ['ignite', 'heavy_slam', 'intimidate', 'dragon_breath'] },
     { name: '魔王', hp: 2000, atk: 60, def: 30, skills: ['execute', 'regen', 'void_compression', 'soul_drain'] },
