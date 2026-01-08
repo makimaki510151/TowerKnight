@@ -230,7 +230,6 @@ class Game {
         let detail = `<b>${skill.name}</b> (Lv.${skill.level})<br>`;
 
         let desc = "";
-        // 各数値プロパティを安全に取得
         const power = Number(skill.power) || 0;
         const effectVal = Number(skill.effectVal) || 0;
         const duration = Number(skill.duration) || 0;
@@ -239,37 +238,52 @@ class Game {
         switch (skill.type) {
             case 'attack':
                 desc = `${power.toFixed(1)}倍の威力で攻撃します。`;
+                if (skill.lifesteal) {
+                    desc += `<br>追加効果: 与えたダメージの${Math.round(skill.lifesteal * 100)}%を回復します。`;
+                }
                 if (skill.debuff) {
                     const d = skill.debuff;
                     const dAmount = Math.abs(Number(d.amount) || 0);
-                    const amountText = dAmount + (Number.isInteger(dAmount) ? '' : '%');
+                    const amountText = dAmount + (Number.isInteger(dAmount) ? '' : '');
                     const upDown = d.amount > 0 ? '上昇' : '低下';
                     desc += `<br>追加効果: 敵の${d.stat.toUpperCase()}を${amountText}${upDown}させます(${(Number(d.duration) || 0) / 1000}秒)。`;
                 }
                 break;
             case 'shield':
-                desc = `${power}の耐久値を持つシールドを${duration / 1000}秒間展開します。`;
+                desc = `耐久値 ${power} (+支援力×2) のシールドを${duration / 1000}秒間展開します。`;
                 break;
             case 'heal':
-                desc = `HPを基本値${power}回復します（支援力で増加）。`;
+                desc = `HPを基本値 ${power} 回復します（支援力とLvで増加）。`;
                 break;
             case 'buff':
                 if (skill.effectType === 'regen') {
-                    desc = `${duration / 1000}秒間、一定時間ごとにHPを${effectVal}回復します。`;
+                    desc = `${duration / 1000}秒間、一定時間ごとにHPを ${effectVal} (+支援力×0.2) 回復します。`;
                 } else {
-                    desc = `${duration / 1000}秒間、${skill.stat ? skill.stat.toUpperCase() : 'ステータス'}を${Math.round(amount * 100)}%上昇させます。`;
+                    const upDown = amount > 0 ? '上昇' : '低下';
+                    desc = `${duration / 1000}秒間、${skill.stat ? skill.stat.toUpperCase() : 'ステータス'}を${Math.abs(Math.round(amount * 100))}%${upDown}させます。`;
                 }
                 break;
             case 'debuff':
-                desc = `${duration / 1000}秒間、敵の${skill.stat ? skill.stat.toUpperCase() : 'ステータス'}を${Math.abs(Math.round(amount * 100))}%低下させます。`;
+                if (skill.stat === 'cd') {
+                    desc = `敵の全スキルのクールダウンを一時的に${amount / 1000}秒増加させます。`;
+                } else {
+                    desc = `${duration / 1000}秒間、敵の${skill.stat ? skill.stat.toUpperCase() : 'ステータス'}を${Math.abs(Math.round(amount * 100))}%低下させます。`;
+                }
                 break;
             case 'dot':
-                desc = `${duration / 1000}秒間、毎秒${effectVal}の継続ダメージを与えます。`;
+                desc = `${duration / 1000}秒間、毎秒 ${effectVal} (+支援力×0.2) の継続ダメージを与えます。`;
+                if (power > 0) {
+                    desc = `${power.toFixed(1)}倍の攻撃を行い、さらに` + desc;
+                }
                 break;
         }
 
         if (skill.selfDmg) desc += `<br><span class="stat-down">【代償】最大HPの${Math.round(skill.selfDmg * 100)}%を消費します。</span>`;
-        if (skill.selfDebuff) desc += `<br><span class="stat-down">【反動】自身の${skill.selfDebuff.stat.toUpperCase()}が低下します。</span>`;
+        if (skill.selfDebuff) {
+            const sd = skill.selfDebuff;
+            const sdAmount = Math.abs(Math.round(sd.amount * 100));
+            desc += `<br><span class="stat-down">【反動】自身の${sd.stat.toUpperCase()}が${sdAmount}%低下します。</span>`;
+        }
 
         let specialNotes = "";
         this.player.relics.concat(this.player.cursedRelics).forEach(relic => {
@@ -288,7 +302,6 @@ class Game {
         let detail = `<b>${item.name}</b><br>`;
         let effects = [];
 
-        // ステータス補正の数値化
         if (item.stats) {
             if (item.stats.atk) effects.push(`攻撃力+${item.stats.atk}`);
             if (item.stats.def) effects.push(`防御力+${item.stats.def}`);
@@ -299,20 +312,21 @@ class Game {
         if (item.statsRaw) {
             if (item.statsRaw.maxHp) {
                 const percent = Math.round(item.statsRaw.maxHp * 100);
-                effects.push(`最大HP${percent}%`);
+                effects.push(`最大HP ${percent}%`);
             }
         }
 
-        // 特殊効果の数値化
         if (item.special) {
             if (item.special.selfDmgTick) effects.push(`毎秒${item.special.selfDmgTick}ダメージ`);
             if (item.special.cdReduc) effects.push(`全CT-${(item.special.cdReduc / 1000).toFixed(1)}s`);
             if (item.special.cdIncrease) effects.push(`全CT+${(item.special.cdIncrease / 1000).toFixed(1)}s`);
-            if (item.special.lifesteal) effects.push(`吸血${item.special.lifesteal * 100}%`);
+            if (item.special.lifesteal) effects.push(`吸血${Math.round(item.special.lifesteal * 100)}%`);
             if (item.special.healingBan) effects.push(`回復無効`);
-            if (item.special.randomDelay) {
-                effects.push(`発動遅延(最大${(item.special.randomDelay / 1000).toFixed(1)}s)`);
-            }
+            if (item.special.randomDelay) effects.push(`発動遅延(最大${(item.special.randomDelay / 1000).toFixed(1)}s)`);
+            if (item.special.defZero) effects.push(`防御力強制0`);
+            if (item.special.maxHpReduc) effects.push(`開始時HP-${Math.round(item.special.maxHpReduc * 100)}%`);
+            if (item.special.cheatDeath) effects.push(`死亡回避(1回)`);
+            if (item.special.breakOnUse) effects.push(`発動時全遺物消滅`);
         }
 
         detail += `<span class="detail">${effects.join(' / ')}</span>`;
@@ -335,7 +349,6 @@ class Game {
         this.battleActive = true;
         this.battleStartTime = performance.now();
 
-        // ログをクリアし、確認ボタンを隠す
         document.getElementById('battle-log').innerHTML = '';
         document.getElementById('battle-post-controls').style.display = 'none';
 
@@ -354,6 +367,15 @@ class Game {
             Math.floor(enemyData.def * scale),
             enemySkills
         );
+
+        // 特殊効果：永劫の飢餓 (maxHpReduc)
+        const maxHpReduc = this.checkSpecial(this.player, 'maxHpReduc');
+        if (maxHpReduc) {
+            this.player.hp = Math.floor(this.player.maxHp * (1 - maxHpReduc));
+            this.log(`【永劫の飢餓】空腹状態で戦闘開始...`);
+        } else {
+            this.player.hp = this.player.maxHp;
+        }
 
         this.player.shield = 0;
         this.player.statusEffects = this.player.statusEffects.filter(ef => ef.permanent);
@@ -580,8 +602,17 @@ class Game {
                 break;
 
             case 'debuff':
-                this.applyStatus(target, 'debuff', skill.stat, skill.amount, skill.duration, skill.name);
-                msg += ` 敵の${skill.stat.toUpperCase()}低下！`;
+                if (skill.stat === 'cd') {
+                    // 敵の全スキルのlastUsedを減らすことで、実質的にCTを増加させる
+                    const targetStates = this.skillStates[side === 'player' ? 'enemy' : 'player'];
+                    targetStates.forEach(state => {
+                        state.lastUsed -= skill.amount;
+                    });
+                    msg += ` 敵の全CTを増加！`;
+                } else {
+                    this.applyStatus(target, 'debuff', skill.stat, skill.amount, skill.duration, skill.name);
+                    msg += ` 敵の${skill.stat.toUpperCase()}低下！`;
+                }
                 break;
 
             case 'dot':
@@ -614,13 +645,12 @@ class Game {
     }
 
     applyDamage(target, amount) {
-        // シールドで肩代わり
         let remaining = amount;
         if (target.shield > 0) {
             if (target.shield >= remaining) {
                 target.shield -= remaining;
                 remaining = 0;
-                this.showFloatingText(target === this.player ? 'player-unit' : 'enemy-unit', 'Block', 'heal'); // 青文字代用
+                this.showFloatingText(target === this.player ? 'player-unit' : 'enemy-unit', 'Block', 'heal');
             } else {
                 remaining -= target.shield;
                 target.shield = 0;
@@ -629,6 +659,7 @@ class Game {
 
         if (remaining > 0) {
             target.hp -= remaining;
+            this.checkDeathPrevention(target);
             this.showFloatingText(target === this.player ? 'player-unit' : 'enemy-unit', remaining, 'damage');
             const el = document.getElementById(target === this.player ? 'player-unit' : 'enemy-unit');
             if (el) {
@@ -639,19 +670,32 @@ class Game {
     }
 
     applyDirectDamage(target, amount, type) {
-        // シールド無視などの特殊ダメージ用
         target.hp -= amount;
-
-        // applyDirectDamage自体にログ出力がない場合を考慮し、ここで必要なら追加できますが、
-        // tickStatusEffects側で詳細な理由（スキル名など）をログに出す方が分かりやすいため、
-        // ここではフローティングテキストのみ維持します。
+        this.checkDeathPrevention(target);
         this.showFloatingText(target === this.player ? 'player-unit' : 'enemy-unit', amount, 'damage');
-
-        // ダメージ時のシェイク演出を追加（任意）
         const el = document.getElementById(target === this.player ? 'player-unit' : 'enemy-unit');
         if (el) {
             el.classList.add('shake');
             setTimeout(() => el.classList.remove('shake'), 200);
+        }
+    }
+
+    checkDeathPrevention(unit) {
+        if (unit.hp <= 0) {
+            const cheatDeath = this.checkSpecial(unit, 'cheatDeath');
+            if (cheatDeath) {
+                unit.hp = 1;
+                this.log(`【身代わりの駒】${unit.name}は踏みとどまった！`);
+                
+                // 遺物消滅処理
+                if (this.checkSpecial(unit, 'breakOnUse')) {
+                    this.log(`身代わりの駒が砕け散り、全ての遺物を失った...`);
+                    unit.relics = [];
+                    unit.cursedRelics = [];
+                    // 永続ステータス効果（自傷ダメージ等）もクリア
+                    unit.statusEffects = unit.statusEffects.filter(ef => !ef.permanent);
+                }
+            }
         }
     }
 
@@ -672,7 +716,6 @@ class Game {
         unit.statusEffects.forEach(ef => {
             if (ef.type === 'buff' || ef.type === 'debuff') {
                 let mod = ef.value;
-                // フラグがある場合、または絶対値が小さい場合は倍率として計算
                 if (ef.isPercent) {
                     if (ef.stat === 'atk') atk *= (1 + mod);
                     if (ef.stat === 'def') def *= (1 + mod);
@@ -684,6 +727,11 @@ class Game {
                 }
             }
         });
+
+        // 特殊効果：狂戦士の魂 (defZero)
+        if (this.checkSpecial(unit, 'defZero')) {
+            def = 0;
+        }
 
         return {
             atk: Math.max(0, Math.floor(atk)),

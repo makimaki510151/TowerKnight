@@ -25,13 +25,22 @@ const SKILLS = [
 
     // --- バフ・デバフ系 (Buffs/Debuffs) ---
     { id: 'berserk', name: 'バーサーク', type: 'buff', stat: 'atk', amount: 0.5, duration: 5000, cd: 10000, initialDelay: 0, selfDebuff: { stat: 'def', amount: -0.5 }, desc: '5秒間攻撃力が50%上昇するが、防御力が半減する。' },
-    { id: 'harden', name: '硬化', type: 'buff', stat: 'def', amount: 10, duration: 4000, cd: 8000, initialDelay: 500, desc: '一時的に防御力を固定値で上昇させる。' },
+    { id: 'harden', name: '硬化', type: 'buff', stat: 'def', amount: 1, duration: 4000, cd: 8000, initialDelay: 500, desc: '一時的に防御力を％で上昇させる。' },
     { id: 'intimidate', name: '威圧', type: 'debuff', stat: 'atk', amount: -0.3, duration: 4000, cd: 9000, initialDelay: 1000, desc: '敵の攻撃力を30%下げる。' },
     { id: 'break_armor', name: '鎧砕き', type: 'attack', power: 0.8, debuff: { stat: 'def', amount: -5, duration: 5000 }, cd: 5000, initialDelay: 800, desc: '攻撃しつつ、敵の防御力を下げる。' },
 
     // --- 回復系 (Heal) ---
     { id: 'heal', name: '応急手当', type: 'heal', power: 20, cd: 5000, initialDelay: 1000, desc: 'HPを中程度回復する。' },
-    { id: 'regen', name: '再生', type: 'buff', effectType: 'regen', effectVal: 5, duration: 8000, cd: 12000, initialDelay: 0, desc: '8秒間、徐々にHPを回復する。' }
+    { id: 'regen', name: '再生', type: 'buff', effectType: 'regen', effectVal: 5, duration: 8000, cd: 12000, initialDelay: 0, desc: '8秒間、徐々にHPを回復する。' },
+
+    // --- 特殊攻撃系 ---
+    { id: 'dragon_breath', name: '竜の息吹', type: 'dot', effectType: 'burn', power: 1.5, effectVal: 20, duration: 6000, cd: 12000, initialDelay: 2000, desc: '広範囲を焼き払い、強力な燃焼ダメージを与える。' },
+    { id: 'void_compression', name: '虚無の圧縮', type: 'attack', power: 5.0, cd: 15000, initialDelay: 4000, desc: '極大ダメージを与えるが、発動までの隙が非常に大きい。' },
+    { id: 'soul_drain', name: '魂の吸収', type: 'attack', power: 1.2, lifesteal: 0.5, cd: 10000, initialDelay: 1000, desc: '敵にダメージを与え、与えたダメージの50%を回復する。' },
+
+    // --- 特殊補助系 ---
+    { id: 'time_stop', name: '刻の停止', type: 'debuff', stat: 'cd', amount: 5000, duration: 1, cd: 20000, initialDelay: 500, desc: '敵の全スキルのクールダウンを一時的に5秒増加させる。' },
+    { id: 'absolute_defense', name: '絶対防御', type: 'shield', power: 200, cd: 30000, initialDelay: 0, duration: 3000, desc: '極めて強力なシールドを展開するが、再使用に時間がかかる。' }
 ];
 
 const RELICS = [
@@ -40,7 +49,9 @@ const RELICS = [
     { id: 'heavy_gauntlet', name: '重い手甲', stats: { atk: 5, def: 5 }, desc: '攻防が上昇する。' },
     { id: 'vampire_tooth', name: '吸血の牙', stats: { atk: 1 }, special: { lifesteal: 0.1 }, desc: '攻撃力が上がり、与ダメージの10%を回復。' },
     { id: 'scholar_glasses', name: '学者の眼鏡', stats: { sup: 8, atk: 1 }, desc: '支援力と攻撃力が上がる。' },
-    { id: 'turtle_shell', name: '亀の甲羅', stats: { def: 8, hp: 10 }, desc: '防御力とHPが上昇する。' }
+    { id: 'turtle_shell', name: '亀の甲羅', stats: { def: 8, hp: 10 }, desc: '防御力とHPが上昇する。' },
+    { id: 'hero_cloak', name: '勇者のマント', stats: { atk: 10, def: 10, hp: 50 }, desc: '伝説の勇者が纏ったとされるマント。全体的な能力が向上する。' },
+    { id: 'wisdom_orb', name: '知恵の宝珠', special: { cdReduc: 300, sup: 15 }, desc: 'スキルの回転率を上げ、支援力を大幅に高める。' }
 ];
 
 const CURSED_RELICS = [
@@ -48,7 +59,10 @@ const CURSED_RELICS = [
     { id: 'glass_cannon', name: '硝子の大砲', stats: { atk: 30 }, statsRaw: { maxHp: 0.5 }, desc: '攻撃力が極大化するが、最大HPが半分になる（適用時）。' },
     { id: 'cursed_clock', name: '狂った時計', special: { cdReduc: 500, randomDelay: 1000 }, desc: 'CTが0.5秒短縮されるが、発動時にランダムで最大1秒遅延する。' },
     { id: 'blood_pact', name: '血の契約', stats: { sup: 30 }, special: { healingBan: true }, desc: '支援力が圧倒的になるが、通常回復が無効化される(DoT等は受ける)。' },
-    { id: 'sloth_statue', name: '怠惰の像', stats: { def: 20, maxHp: 50 }, special: { cdIncrease: 1000 }, desc: '耐久力が跳ね上がるが、行動速度が著しく低下する。' }
+    { id: 'sloth_statue', name: '怠惰の像', stats: { def: 20, maxHp: 50 }, special: { cdIncrease: 1000 }, desc: '耐久力が跳ね上がるが、行動速度が著しく低下する。' },
+    { id: 'berserker_soul', name: '狂戦士の魂', stats: { atk: 50 }, special: { defZero: true }, desc: '攻撃力が爆発的に上昇するが、防御力が強制的に0になる。' },
+    { id: 'eternal_famine', name: '永劫の飢餓', special: { lifesteal: 0.3, maxHpReduc: 0.7 }, desc: '高い吸血能力を得るが、最大HPが30%の状態からスタートする。' },
+    { id: 'sacrifice_pawn', name: '身代わりの駒', special: { cheatDeath: 1, breakOnUse: true }, desc: '一度だけ死亡を回避できるが、発動時に全ての装備中の遺物が消滅する。' }
 ];
 
 const ENEMIES = [
@@ -68,6 +82,10 @@ const ENEMIES = [
     { name: 'ゴーレム', hp: 400, atk: 30, def: 20, skills: ['heavy_slam', 'iron_wall'] },
 
     // ボス級
-    { name: 'ドラゴン', hp: 600, atk: 40, def: 15, skills: ['ignite', 'heavy_slam', 'intimidate'] },
-    { name: '魔王', hp: 800, atk: 35, def: 10, skills: ['execute', 'regen', 'shield_curse'] } // shield_curseは仮
+    { name: 'ドラゴン', hp: 1200, atk: 55, def: 25, skills: ['ignite', 'heavy_slam', 'intimidate', 'dragon_breath'] },
+    { name: '魔王', hp: 2000, atk: 60, def: 30, skills: ['execute', 'regen', 'void_compression', 'soul_drain'] },
+
+    // --- 超高難易度 / エンドコンテンツ ---
+    { name: '時を喰らうもの', hp: 1500, atk: 45, def: 20, skills: ['time_stop', 'quick_stab', 'heavy_slam'] },
+    { name: '境界の守護者', hp: 3000, atk: 50, def: 100, skills: ['iron_wall', 'harden', 'absolute_defense'] }
 ];
