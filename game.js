@@ -220,43 +220,50 @@ class Game {
         });
     }
 
+    // game.js 内の getSkillDetail メソッドの修正
+
     getSkillDetail(skill) {
         const totalCd = this.getSkillCd(skill, this.player);
         const totalDelay = (skill.initialDelay || 0) + (skill.extraDelay || 0);
 
-        // レベルに応じた補正値を計算（強化処理のロジックと合わせる）
-        // ※showUpgradeModal での強化内容を反映させるため、現在の値をそのまま表示に使用します。
-
         let detail = `<b>${skill.name}</b> (Lv.${skill.level})<br>`;
 
         let desc = "";
+        // 各数値プロパティを安全に取得
+        const power = Number(skill.power) || 0;
+        const effectVal = Number(skill.effectVal) || 0;
+        const duration = Number(skill.duration) || 0;
+        const amount = Number(skill.amount) || 0;
+
         switch (skill.type) {
             case 'attack':
-                // レベルによる威力補正は useSkill 内の powerMult と同様の計算、または現在の power を表示
-                desc = `${skill.power.toFixed(1)}倍の威力で攻撃します。`;
+                desc = `${power.toFixed(1)}倍の威力で攻撃します。`;
                 if (skill.debuff) {
-                    desc += `命中時、敵の${skill.debuff.stat.toUpperCase()}を${Math.abs(skill.debuff.amount)}${Number.isInteger(skill.debuff.amount) ? '' : '%'}${skill.debuff.amount > 0 ? '上昇' : '低下'}させます。`;
+                    const d = skill.debuff;
+                    const dAmount = Math.abs(Number(d.amount) || 0);
+                    const amountText = dAmount + (Number.isInteger(dAmount) ? '' : '%');
+                    const upDown = d.amount > 0 ? '上昇' : '低下';
+                    desc += `<br>追加効果: 敵の${d.stat.toUpperCase()}を${amountText}${upDown}させます(${(Number(d.duration) || 0) / 1000}秒)。`;
                 }
                 break;
             case 'shield':
-                desc = `${skill.power}の耐久値を持つシールドを${skill.duration / 1000}秒間展開します。`;
+                desc = `${power}の耐久値を持つシールドを${duration / 1000}秒間展開します。`;
                 break;
             case 'heal':
-                // 支援力ボーナス計算を簡易表示
-                desc = `HPを基本値${skill.power}回復します（支援力で増加）。`;
+                desc = `HPを基本値${power}回復します（支援力で増加）。`;
                 break;
             case 'buff':
                 if (skill.effectType === 'regen') {
-                    desc = `${skill.duration / 1000}秒間、一定時間ごとにHPを${skill.effectVal}回復します。`;
+                    desc = `${duration / 1000}秒間、一定時間ごとにHPを${effectVal}回復します。`;
                 } else {
-                    desc = `${skill.duration / 1000}秒間、${skill.stat ? skill.stat.toUpperCase() : 'ステータス'}を${Math.round(skill.amount * 100)}%上昇させます。`;
+                    desc = `${duration / 1000}秒間、${skill.stat ? skill.stat.toUpperCase() : 'ステータス'}を${Math.round(amount * 100)}%上昇させます。`;
                 }
                 break;
             case 'debuff':
-                desc = `${skill.duration / 1000}秒間、敵の${skill.stat ? skill.stat.toUpperCase() : 'ステータス'}を${Math.abs(Math.round(skill.amount * 100))}%低下させます。`;
+                desc = `${duration / 1000}秒間、敵の${skill.stat ? skill.stat.toUpperCase() : 'ステータス'}を${Math.abs(Math.round(amount * 100))}%低下させます。`;
                 break;
             case 'dot':
-                desc = `${skill.duration / 1000}秒間、毎秒${skill.effectVal}の継続ダメージを与えます。`;
+                desc = `${duration / 1000}秒間、毎秒${effectVal}の継続ダメージを与えます。`;
                 break;
         }
 
@@ -491,10 +498,17 @@ class Game {
 
         switch (skill.type) {
             case 'attack':
-                const powerMult = skill.power + ((skill.level - 1) * 0.1);
-                // 補正後のatkを使用
-                let rawDmg = (stats.atk * powerMult);
-                let damage = Math.max(1, Math.floor(rawDmg - targetStats.def));
+                const basePower = Number(skill.power) || 0;
+                const currentLevel = Number(skill.level) || 1;
+                const powerMult = basePower + ((currentLevel - 1) * 0.1);
+
+                // ステータスが正常に取得できているか確認しつつ計算
+                let rawDmg = (Number(stats.atk) || 0) * powerMult;
+                let targetDef = Number(targetStats.def) || 0;
+                let damage = Math.max(1, Math.floor(rawDmg - targetDef));
+
+                // もし damage が NaN になった場合の最終ガード
+                if (isNaN(damage)) damage = 1;
 
                 const lifesteal = this.checkSpecial(actor, 'lifesteal');
                 if (lifesteal) {
@@ -525,8 +539,11 @@ class Game {
                 if (this.checkSpecial(actor, 'healingBan')) {
                     msg += ` しかし呪いで回復できない！`;
                 } else {
-                    // 修正：actor.sup ではなく stats.sup (遺物補正込) を使用
-                    const healAmt = Math.floor((skill.power + stats.sup) * (1 + (skill.level * 0.2)));
+                    // 修正：powerとlevelを確実に数値として計算
+                    const basePower = Number(skill.power) || 0;
+                    const levelBonus = (Number(skill.level) || 1) * 0.2;
+                    const healAmt = Math.floor((basePower + stats.sup) * (1 + levelBonus));
+
                     actor.hp = Math.min(actor.maxHp, actor.hp + healAmt);
                     msg += ` ${healAmt}回復！`;
                     this.showFloatingText(side === 'player' ? 'player-unit' : 'enemy-unit', healAmt, 'heal');
@@ -536,12 +553,15 @@ class Game {
             case 'buff':
                 const isRegen = skill.effectType === 'regen';
                 const statName = skill.stat ? skill.stat.toUpperCase() : '継続回復';
-                // 継続回復(regen)の場合、effectValに支援力(stats.sup)の一部を乗せるなどの調整も可能
+
+                // 修正：regenの値を数値にキャスト
+                const effectValue = isRegen ? (Number(skill.effectVal) || 0) : (Number(skill.amount) || 0);
+
                 this.applyStatus(
                     actor,
                     isRegen ? 'regen' : 'buff',
                     skill.stat,
-                    isRegen ? skill.effectVal : skill.amount,
+                    effectValue,
                     skill.duration,
                     skill.name
                 );
@@ -555,12 +575,12 @@ class Game {
 
             case 'dot':
                 if (skill.power > 0) {
-                    // 修正：補正後のatkを使用
-                    let d = Math.max(1, Math.floor((stats.atk * skill.power) - targetStats.def));
+                    let d = Math.max(1, Math.floor((stats.atk * Number(skill.power)) - targetStats.def));
                     this.applyDamage(target, d);
                 }
-                // 修正：補正後のsupを使用
-                this.applyStatus(target, 'dot', null, skill.effectVal + Math.floor(stats.sup * 0.2), skill.duration, skill.name, skill.effectType);
+                // 修正：effectValを数値にキャスト
+                const dotBase = Number(skill.effectVal) || 0;
+                this.applyStatus(target, 'dot', null, dotBase + Math.floor(stats.sup * 0.2), skill.duration, skill.name, skill.effectType);
                 msg += ` ${skill.effectType === 'poison' ? '毒' : '燃焼'}を与えた！`;
                 break;
         }
@@ -658,11 +678,14 @@ class Game {
     }
 
     applyStatMod(base, val) {
-        // valが小数の場合は倍率(0.5 = +50%, -0.3 = -30%)、整数の場合は固定値加算とみなす簡易ロジック
-        if (typeof val === 'number') {
-            return base * (1 + val);
+        const numericBase = Number(base) || 0;
+        const numericVal = Number(val) || 0;
+
+        // 小数の場合は倍率、整数の場合は固定値加算
+        if (Math.abs(numericVal) < 2 && numericVal !== 0) {
+            return numericBase * (1 + numericVal);
         }
-        return base + val;
+        return numericBase + numericVal;
     }
 
     checkSpecial(unit, key) {
@@ -842,8 +865,24 @@ class Game {
         options.innerHTML = '';
 
         const upgrades = [
-            { name: '威力強化', desc: '威力係数+20%', action: () => { skill.power += 0.2; skill.level++; } },
-            { name: 'CT短縮', desc: 'CT-10%', action: () => { skill.cd = Math.max(500, skill.cd * 0.9); skill.level++; } },
+            {
+                name: '威力強化',
+                desc: '威力係数+20%',
+                action: () => {
+                    // 修正前: skill.power = (skill.power + 0.2).toFixed(1); (文字列になる)
+                    // 修正後: 数値として計算し、浮動小数点の誤差を丸める
+                    skill.power = Math.round((Number(skill.power) + 0.2) * 10) / 10;
+                    skill.level++;
+                }
+            },
+            {
+                name: 'CT短縮',
+                desc: 'CT-10%',
+                action: () => {
+                    skill.cd = Math.max(500, Math.floor(skill.cd * 0.9));
+                    skill.level++;
+                }
+            },
         ];
 
         // シールドやバフなら効果量アップなども
