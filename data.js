@@ -53,7 +53,7 @@ const CURSED_RELICS = [
 
 const ENEMIES = [
     // 序盤
-    { name: 'スライム', hp: 20, atk: 8, def: 2, skills: ['slash'] },
+    { name: 'スライム', hp: 15, atk: 8, def: 2, skills: ['slash'] },
     { name: '毒バチ', hp: 45, atk: 12, def: 0, skills: ['poison_blade', 'quick_stab'] }, // DoT持ち
     { name: '甲羅虫', hp: 80, atk: 6, def: 8, skills: ['harden', 'slash'] }, // バフ持ち
 

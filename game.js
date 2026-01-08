@@ -14,6 +14,7 @@ class Game {
         this.skillStates = { player: [], enemy: [] };
         this.pendingUpgrade = null;
         this.statusTicker = 0; // 1秒ごとの処理用
+        this.battleStartTime = 0;
 
         this.initTooltip();
     }
@@ -332,6 +333,7 @@ class Game {
 
     startFloor() {
         this.battleActive = true;
+        this.battleStartTime = performance.now();
 
         // ログをクリアし、確認ボタンを隠す
         document.getElementById('battle-log').innerHTML = '';
@@ -381,6 +383,15 @@ class Game {
     battleLoop(timestamp) {
         if (!this.battleActive) return;
         if (!this.lastTimestamp) this.lastTimestamp = timestamp;
+
+        const elapsedBattleTime = timestamp - this.battleStartTime;
+        if (elapsedBattleTime > 180000) { // 3分 = 180,000ms
+            this.log("時間切れ！ 集中力が底を尽きた...");
+            this.player.hp = 0; // プレイヤーのHPを0にして敗北へ
+            this.battleActive = false;
+            this.gameOver();
+            return;
+        }
 
         const delta = timestamp - this.lastTimestamp;
 
@@ -920,6 +931,10 @@ class Game {
         let curseCount = 0;
         const selectedRewardIds = new Set();
 
+        // 追加：現在のプレイヤーの技の数を確認
+        const currentSkillCount = this.player.skills.length;
+        const isSkillLimit = currentSkillCount >= 6;
+
         // 報酬スロットが6個埋まるまでループ
         while (rewards.length < 6) {
             const r = Math.random();
@@ -931,6 +946,11 @@ class Game {
                 if (selectedRewardIds.has(skillTemplate.id)) continue;
 
                 const existing = this.player.skills.find(s => s.id === skillTemplate.id);
+
+                // 修正：既に持っているスキルの「強化」は出現させるが、
+                // 上限に達している場合は「未習得のスキル」をスキップする
+                if (!existing && isSkillLimit) continue;
+
                 reward = {
                     type: 'skill',
                     data: existing ? { ...existing } : { ...skillTemplate, level: 1 },
