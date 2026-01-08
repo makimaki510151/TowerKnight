@@ -239,7 +239,7 @@ class Game {
                 }
                 break;
             case 'shield':
-                desc = `${skill.power}の耐久値を持つシールドを展開します。`;
+                desc = `${skill.power}の耐久値を持つシールドを${skill.duration / 1000}秒間展開します。`;
                 break;
             case 'heal':
                 // 支援力ボーナス計算を簡易表示
