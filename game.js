@@ -986,8 +986,8 @@ class Game {
                     } else if (skill.type === 'buff' || skill.type === 'debuff') {
                         // バフ・デバフスキルの場合は効果量を20%強化
                         if (skill.amount !== undefined) {
-                            // 0.1単位で丸める（割合バフなどのため）
-                            skill.amount = Math.round(skill.amount + 0.2 * 10) / 10;
+                            // 修正：バーサーク等の割合バフは+20%（加算）にする
+                            skill.amount = Math.round((skill.amount + 0.2) * 100) / 100;
                         }
                         if (skill.effectVal !== undefined) {
                             skill.effectVal = Math.floor(skill.effectVal * 1.2);
@@ -1053,9 +1053,9 @@ class Game {
         // 現在の所持品を表示するセクションを追加
         const currentItemsDiv = document.createElement('div');
         currentItemsDiv.style.cssText = 'background: rgba(0,0,0,0.5); padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #555;';
-        
+
         let currentItemsHTML = '<h4 style="margin-top: 0; color: var(--accent-color);">現在の所持品</h4>';
-        
+
         // スキル一覧
         if (this.player.skills.length > 0) {
             currentItemsHTML += '<div style="margin-bottom: 10px;"><b style="color: var(--skill-color);">技 (' + this.player.skills.length + '/6)</b><br>';
@@ -1064,7 +1064,7 @@ class Game {
             });
             currentItemsHTML += '</div>';
         }
-        
+
         // 遺物一覧
         if (this.player.relics.length > 0) {
             currentItemsHTML += '<div style="margin-bottom: 10px;"><b style="color: var(--relic-color);">遺物 (' + this.player.relics.length + '個)</b><br>';
@@ -1073,7 +1073,7 @@ class Game {
             });
             currentItemsHTML += '</div>';
         }
-        
+
         // 呪物一覧
         if (this.player.cursedRelics.length > 0) {
             currentItemsHTML += '<div><b style="color: var(--curse-color);">呪物 (' + this.player.cursedRelics.length + '個)</b><br>';
@@ -1082,7 +1082,7 @@ class Game {
             });
             currentItemsHTML += '</div>';
         }
-        
+
         currentItemsDiv.innerHTML = currentItemsHTML;
         rewardList.appendChild(currentItemsDiv);
         const rewards = [];
