@@ -206,7 +206,11 @@ class Game {
                 desc = `HPを基本値${skill.power}回復します（支援力で増加）。`;
                 break;
             case 'buff':
-                desc = `${skill.duration / 1000}秒間、${skill.stat ? skill.stat.toUpperCase() : 'ステータス'}を${Math.round(skill.amount * 100)}%上昇させます。`;
+                if (skill.effectType === 'regen') {
+                    desc = `${skill.duration / 1000}秒間、一定時間ごとにHPを${skill.effectVal}回復します。`;
+                } else {
+                    desc = `${skill.duration / 1000}秒間、${skill.stat ? skill.stat.toUpperCase() : 'ステータス'}を${Math.round(skill.amount * 100)}%上昇させます。`;
+                }
                 break;
             case 'debuff':
                 desc = `${skill.duration / 1000}秒間、敵の${skill.stat ? skill.stat.toUpperCase() : 'ステータス'}を${Math.abs(Math.round(skill.amount * 100))}%低下させます。`;
@@ -244,6 +248,13 @@ class Game {
             if (item.stats.maxHp) effects.push(`最大HP+${item.stats.maxHp}`);
         }
 
+        if (item.statsRaw) {
+            if (item.statsRaw.maxHp) {
+                const percent = Math.round(item.statsRaw.maxHp * 100);
+                effects.push(`最大HP${percent}%`);
+            }
+        }
+
         // 特殊効果の数値化
         if (item.special) {
             if (item.special.selfDmgTick) effects.push(`毎秒${item.special.selfDmgTick}ダメージ`);
@@ -251,6 +262,9 @@ class Game {
             if (item.special.cdIncrease) effects.push(`全CT+${(item.special.cdIncrease / 1000).toFixed(1)}s`);
             if (item.special.lifesteal) effects.push(`吸血${item.special.lifesteal * 100}%`);
             if (item.special.healingBan) effects.push(`回復無効`);
+            if (item.special.randomDelay) {
+                effects.push(`発動遅延(最大${(item.special.randomDelay / 1000).toFixed(1)}s)`);
+            }
         }
 
         detail += `<span class="detail">${effects.join(' / ')}</span>`;
@@ -272,13 +286,16 @@ class Game {
     startFloor() {
         this.battleActive = true;
         // 敵の生成
-        const enemyData = ENEMIES[Math.min(ENEMIES.length - 1, Math.floor((this.floor - 1) / 2))]; // 2階ごとに種類変化
+        const enemyData = ENEMIES[Math.min(ENEMIES.length - 1, Math.floor((this.floor - 1) / 2))];
         const scale = 1 + (this.floor - 1) * 0.08;
 
-        // 敵スキルデータを参照解決
         const enemySkills = enemyData.skills.map(id => {
             const base = SKILLS.find(s => s.id === id);
-            return base ? { ...base, level: 1 } : SKILLS[0];
+            if (base) {
+                return { ...base, level: 1, extraCd: 0, extraDelay: 0 };
+            } else {
+                return { id: id, name: id, type: 'attack', power: 1.0, cd: 3000, level: 1 };
+            }
         });
 
         this.enemy = this.createUnit(enemyData.name,
@@ -289,14 +306,19 @@ class Game {
             enemySkills
         );
 
-        // プレイヤー状態リセット（HPは引き継ぎ、シールド・状態異常はリセット）
+        // プレイヤー状態リセット
         this.player.shield = 0;
         this.player.statusEffects = [];
-        this.player.relics.concat(this.player.cursedRelics).forEach(r => {
-            if (r.special && r.special.randomDelay) {/*戦闘開始時処理あれば*/ }
-        });
 
         this.initSkillStates();
+
+        // --- 修正点: 敵のスキル表示をリセット ---
+        const enemySkillContainer = document.getElementById('enemy-skills');
+        if (enemySkillContainer) {
+            enemySkillContainer.innerHTML = '';
+        }
+        // ------------------------------------
+
         this.log(`Floor ${this.floor}: ${this.enemy.name} が現れた！`);
         this.showScreen('battle-screen');
 
@@ -352,16 +374,18 @@ class Game {
     }
 
     tickStatusEffects(unit, time) {
-        // DoT / Regen の処理
         unit.statusEffects.forEach(ef => {
             if (ef.type === 'dot') {
-                const dmg = Math.max(1, ef.value); // 固定値 or 計算値
+                const dmg = Math.max(1, ef.value);
                 this.applyDirectDamage(unit, dmg, 'dot');
             } else if (ef.type === 'regen') {
-                // 呪物「血の契約」などの回復禁止チェック
+                // 呪物チェック
                 if (this.checkSpecial(unit, 'healingBan')) return;
-                unit.hp = Math.min(unit.maxHp, unit.hp + ef.value);
-                this.showFloatingText(unit === this.player ? 'player-unit' : 'enemy-unit', ef.value, 'heal');
+
+                // ef.value (skill.effectVal) 分だけ回復
+                const healAmt = ef.value;
+                unit.hp = Math.min(unit.maxHp, unit.hp + healAmt);
+                this.showFloatingText(unit === this.player ? 'player-unit' : 'enemy-unit', healAmt, 'heal');
             } else if (ef.special === 'selfDmgTick') {
                 this.applyDirectDamage(unit, ef.value, 'curse');
             }
@@ -470,8 +494,18 @@ class Game {
                 break;
 
             case 'buff':
-                this.applyStatus(actor, 'buff', skill.stat, skill.amount, skill.duration, skill.name);
-                msg += ` ${skill.stat.toUpperCase()}上昇！`;
+                const isRegen = skill.effectType === 'regen';
+                const statName = skill.stat ? skill.stat.toUpperCase() : '継続回復';
+                // Regenの場合は type を 'regen' にして applyStatus する
+                this.applyStatus(
+                    actor,
+                    isRegen ? 'regen' : 'buff',
+                    skill.stat,
+                    isRegen ? skill.effectVal : skill.amount,
+                    skill.duration,
+                    skill.name
+                );
+                msg += ` ${statName}付与！`;
                 break;
 
             case 'debuff':
