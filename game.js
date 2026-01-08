@@ -564,13 +564,16 @@ class Game {
 
                 if (isNaN(damage)) damage = 1;
 
-                const lifesteal = this.checkSpecial(actor, 'lifesteal');
-                if (lifesteal) {
-                    const heal = Math.floor(damage * lifesteal);
+                // 修正：遺物のライフスティールだけでなく、スキル自体のライフスティールも考慮
+                const relicLifesteal = this.checkSpecial(actor, 'lifesteal') || 0;
+                const skillLifesteal = skill.lifesteal || 0;
+                const totalLifesteal = relicLifesteal + skillLifesteal;
+
+                if (totalLifesteal > 0) {
+                    const heal = Math.floor(damage * totalLifesteal);
                     if (!this.checkSpecial(actor, 'healingBan') && heal > 0) {
                         actor.hp = Math.min(actor.maxHp, actor.hp + heal);
                         this.showFloatingText(side === 'player' ? 'player-unit' : 'enemy-unit', heal, 'heal');
-                        // 追加：回復のログ出力
                         this.log(`${actor.name}は攻撃で ${heal} 回復した！`);
                     }
                 }
@@ -984,7 +987,7 @@ class Game {
                         // バフ・デバフスキルの場合は効果量を20%強化
                         if (skill.amount !== undefined) {
                             // 0.1単位で丸める（割合バフなどのため）
-                            skill.amount = Math.round(skill.amount * 1.2 * 100) / 100;
+                            skill.amount = Math.round(skill.amount + 0.2 * 10) / 10;
                         }
                         if (skill.effectVal !== undefined) {
                             skill.effectVal = Math.floor(skill.effectVal * 1.2);
@@ -1046,6 +1049,42 @@ class Game {
     showRewards() {
         const rewardList = document.getElementById('reward-list');
         rewardList.innerHTML = '';
+
+        // 現在の所持品を表示するセクションを追加
+        const currentItemsDiv = document.createElement('div');
+        currentItemsDiv.style.cssText = 'background: rgba(0,0,0,0.5); padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #555;';
+        
+        let currentItemsHTML = '<h4 style="margin-top: 0; color: var(--accent-color);">現在の所持品</h4>';
+        
+        // スキル一覧
+        if (this.player.skills.length > 0) {
+            currentItemsHTML += '<div style="margin-bottom: 10px;"><b style="color: var(--skill-color);">技 (' + this.player.skills.length + '/6)</b><br>';
+            this.player.skills.forEach(skill => {
+                currentItemsHTML += `<span style="font-size: 0.85em; display: inline-block; background: #333; padding: 4px 8px; border-radius: 3px; margin: 2px; border-left: 3px solid var(--skill-color);">${skill.name} Lv.${skill.level}</span>`;
+            });
+            currentItemsHTML += '</div>';
+        }
+        
+        // 遺物一覧
+        if (this.player.relics.length > 0) {
+            currentItemsHTML += '<div style="margin-bottom: 10px;"><b style="color: var(--relic-color);">遺物 (' + this.player.relics.length + '個)</b><br>';
+            this.player.relics.forEach(relic => {
+                currentItemsHTML += `<span style="font-size: 0.85em; display: inline-block; background: #333; padding: 4px 8px; border-radius: 3px; margin: 2px; border-left: 3px solid var(--relic-color);">${relic.name}</span>`;
+            });
+            currentItemsHTML += '</div>';
+        }
+        
+        // 呪物一覧
+        if (this.player.cursedRelics.length > 0) {
+            currentItemsHTML += '<div><b style="color: var(--curse-color);">呪物 (' + this.player.cursedRelics.length + '個)</b><br>';
+            this.player.cursedRelics.forEach(curse => {
+                currentItemsHTML += `<span style="font-size: 0.85em; display: inline-block; background: #333; padding: 4px 8px; border-radius: 3px; margin: 2px; border-left: 3px solid var(--curse-color);">${curse.name}</span>`;
+            });
+            currentItemsHTML += '</div>';
+        }
+        
+        currentItemsDiv.innerHTML = currentItemsHTML;
+        rewardList.appendChild(currentItemsDiv);
         const rewards = [];
 
         // 出現制限と重複管理用
@@ -1101,6 +1140,12 @@ class Game {
 
             if (reward) rewards.push(reward);
         }
+
+        // 報酬セクションの見出しを追加
+        const rewardsHeaderDiv = document.createElement('div');
+        rewardsHeaderDiv.style.cssText = 'color: var(--accent-color); font-weight: bold; margin-bottom: 10px; font-size: 1.1em;';
+        rewardsHeaderDiv.innerText = '報酬を選択してください';
+        rewardList.appendChild(rewardsHeaderDiv);
 
         rewards.forEach(reward => {
             const div = document.createElement('div');

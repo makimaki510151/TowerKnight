@@ -13,7 +13,7 @@ const SKILLS = [
     { id: 'quick_stab', name: '速突', type: 'attack', power: 0.6, cd: 1000, initialDelay: 0, desc: '威力は低いが回転率が良い。' },
     { id: 'heavy_slam', name: '大振撃', type: 'attack', power: 2.5, cd: 4500, initialDelay: 1500, desc: '強力だが隙が大きい一撃。' },
     { id: 'execute', name: '処刑', type: 'attack', power: 4.0, cd: 8000, initialDelay: 3000, desc: '致命的な一撃を与えるが、準備に時間がかかる。' },
-    { id: 'double_edge', name: '諸刃の剣', type: 'attack', power: 2.0, cd: 2000, initialDelay: 200, selfDmg: 0.1, desc: '高威力・高速だが、自身のHPを10%消費する。' },
+    { id: 'double_edge', name: '諸刃の剣', type: 'attack', power: 2.0, cd: 2000, initialDelay: 2000, selfDmg: 0.1, desc: '高威力・高速だが、自身のHPを10%消費する。' },
 
     // --- 防御・シールド系 (Shields) ---
     { id: 'parry', name: '受け流し', type: 'shield', power: 15, cd: 3000, initialDelay: 0, duration: 1500, desc: '短時間、少量のシールドを展開する。' },
@@ -24,7 +24,7 @@ const SKILLS = [
     { id: 'ignite', name: '点火', type: 'dot', effectType: 'burn', power: 0.2, effectVal: 10, duration: 3000, cd: 6000, initialDelay: 1000, desc: '威力は低いが、短時間で激しい燃焼ダメージを与える。' },
 
     // --- バフ・デバフ系 (Buffs/Debuffs) ---
-    { id: 'berserk', name: 'バーサーク', type: 'buff', stat: 'atk', amount: 0.5, duration: 5000, cd: 10000, initialDelay: 0, selfDebuff: { stat: 'def', amount: -0.5 }, desc: '5秒間攻撃力が50%上昇するが、防御力が半減する。' },
+    { id: 'berserk', name: 'バーサーク', type: 'buff', stat: 'atk', amount: 0.5, duration: 5000, cd: 10000, initialDelay: 1900, selfDebuff: { stat: 'def', amount: -0.5 }, desc: '5秒間攻撃力が50%上昇するが、防御力が半減する。' },
     { id: 'harden', name: '硬化', type: 'buff', stat: 'def', amount: 1, duration: 4000, cd: 8000, initialDelay: 500, desc: '一時的に防御力を％で上昇させる。' },
     { id: 'intimidate', name: '威圧', type: 'debuff', stat: 'atk', amount: -0.3, duration: 4000, cd: 9000, initialDelay: 1000, desc: '敵の攻撃力を30%下げる。' },
     { id: 'break_armor', name: '鎧砕き', type: 'attack', power: 0.8, debuff: { stat: 'def', amount: -5, duration: 5000 }, cd: 5000, initialDelay: 800, desc: '攻撃しつつ、敵の防御力を下げる。' },
@@ -39,7 +39,7 @@ const SKILLS = [
     { id: 'soul_drain', name: '魂の吸収', type: 'attack', power: 1.2, lifesteal: 0.5, cd: 10000, initialDelay: 1000, desc: '敵にダメージを与え、与えたダメージの50%を回復する。' },
 
     // --- 特殊補助系 ---
-    { id: 'time_stop', name: '刻の停止', type: 'debuff', stat: 'cd', amount: 5000, duration: 1, cd: 20000, initialDelay: 500, desc: '敵の全スキルのクールダウンを一時的に5秒増加させる。' },
+    { id: 'time_stop', name: '刻の停止', type: 'debuff', stat: 'cd', amount: 5000, cd: 20000, initialDelay: 500, desc: '敵の全スキルのクールダウンを一時的に5秒増加させる。' },
     { id: 'absolute_defense', name: '絶対防御', type: 'shield', power: 200, cd: 30000, initialDelay: 0, duration: 3000, desc: '極めて強力なシールドを展開するが、再使用に時間がかかる。' }
 ];
 
