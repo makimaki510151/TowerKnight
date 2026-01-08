@@ -191,7 +191,14 @@ class Game {
         input.type = 'number';
         input.value = val || 0;
         input.step = 100;
-        input.onchange = (e) => callback(parseInt(e.target.value) || 0);
+        input.min = 0; // 属性でマイナス入力を制限
+        input.onchange = (e) => {
+            // 入力値を数値化し、0未満なら0に固定
+            let newValue = parseInt(e.target.value) || 0;
+            if (newValue < 0) newValue = 0;
+            e.target.value = newValue; // 表示側も0に戻す
+            callback(newValue);
+        };
         group.appendChild(input);
         return group;
     }
@@ -686,7 +693,7 @@ class Game {
             if (cheatDeath) {
                 unit.hp = 1;
                 this.log(`【身代わりの駒】${unit.name}は踏みとどまった！`);
-                
+
                 // 遺物消滅処理
                 if (this.checkSpecial(unit, 'breakOnUse')) {
                     this.log(`身代わりの駒が砕け散り、全ての遺物を失った...`);
