@@ -586,7 +586,7 @@ class Game {
             case 'shield':
                 // 修正：actor.sup ではなく stats.sup (遺物補正込) を使用
                 const shieldAmt = skill.power + (stats.sup * 2);
-                actor.shield = (actor.shield || 0) + shieldAmt;
+                actor.shield = Math.min(actor.maxHp, (actor.shield || 0) + shieldAmt);
                 actor.shieldDuration = skill.duration;
                 msg += ` シールド${shieldAmt}を展開！`;
                 break;
@@ -971,7 +971,7 @@ class Game {
         const upgrades = [
             {
                 name: skill.type === 'shield' ? '耐久強化' : (skill.type === 'heal' ? '回復強化' : '威力強化'),
-                desc: (skill.type === 'shield' || skill.type === 'heal' || skill.type === 'dot') ? '効果量+20%' : '威力係数+20%',
+                desc: (skill.type === 'shield' || skill.type === 'heal' || skill.type === 'dot' || skill.type === 'buff' || skill.type === 'debuff') ? '効果量+20%' : '威力係数+20%',
                 action: () => {
                     if (skill.type === 'shield' || skill.type === 'heal') {
                         // 実数値スキルの場合は20%増加
@@ -980,6 +980,15 @@ class Game {
                         // DoTスキルの場合は直接攻撃係数と継続ダメージの両方を強化
                         skill.power = Math.round((Number(skill.power) + 0.1) * 10) / 10;
                         if (skill.effectVal) skill.effectVal = Math.floor(skill.effectVal * 1.2);
+                    } else if (skill.type === 'buff' || skill.type === 'debuff') {
+                        // バフ・デバフスキルの場合は効果量を20%強化
+                        if (skill.amount !== undefined) {
+                            // 0.1単位で丸める（割合バフなどのため）
+                            skill.amount = Math.round(skill.amount * 1.2 * 100) / 100;
+                        }
+                        if (skill.effectVal !== undefined) {
+                            skill.effectVal = Math.floor(skill.effectVal * 1.2);
+                        }
                     } else {
                         // 通常攻撃スキルの場合は係数を+0.2
                         skill.power = Math.round((Number(skill.power) + 0.2) * 10) / 10;

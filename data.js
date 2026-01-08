@@ -45,13 +45,13 @@ const SKILLS = [
 
 const RELICS = [
     { id: 'warrior_ring', name: '戦士の指輪', stats: { atk: 5, def: 2 }, desc: '攻撃と防御が上昇。' },
-    { id: 'light_feather', name: '軽い羽根', stats: { def: 2 }, special: { cdReduc: 200 }, desc: '防御が上がり、全スキルのCTが0.2秒短縮。' },
+    { id: 'light_feather', name: '軽い羽根', stats: { def: 20 }, special: { cdReduc: 50 }, desc: '防御が上がり、全スキルのCTが0.2秒短縮。' },
     { id: 'heavy_gauntlet', name: '重い手甲', stats: { atk: 8, def: 8 }, desc: '攻防が大きく上昇する。' },
     { id: 'vampire_tooth', name: '吸血の牙', stats: { atk: 3 }, special: { lifesteal: 0.15 }, desc: '攻撃力が上がり、与ダメージの15%を回復。' },
     { id: 'scholar_glasses', name: '学者の眼鏡', stats: { sup: 12, atk: 2 }, desc: '支援力と攻撃力が上がる。' },
     { id: 'turtle_shell', name: '亀の甲羅', stats: { def: 12, hp: 20 }, desc: '防御力とHPが上昇する。' },
     { id: 'hero_cloak', name: '勇者のマント', stats: { atk: 15, def: 15, hp: 80 }, desc: '伝説の勇者が纏ったとされるマント。全体的な能力が向上する。' },
-    { id: 'wisdom_orb', name: '知恵の宝珠', stats: { sup: 20 }, special: { cdReduc: 400 }, desc: 'スキルの回転率を上げ、支援力を大幅に高める。' }
+    { id: 'wisdom_orb', name: '知恵の宝珠', stats: { sup: 20 }, special: { cdReduc: 100 }, desc: 'スキルの回転率を上げ、支援力を大幅に高める。' }
 ];
 
 const CURSED_RELICS = [
@@ -91,5 +91,5 @@ const ENEMIES = [
 
     // --- 超高難易度 / エンドコンテンツ ---
     { name: '時を喰らうもの', hp: 1500, atk: 45, def: 20, skills: ['time_stop', 'quick_stab', 'heavy_slam'] },
-    { name: '境界の守護者', hp: 3000, atk: 50, def: 100, skills: ['iron_wall', 'harden', 'absolute_defense'] }
+    { name: '境界の守護者', hp: 3000, atk: 50, def: 100, skills: ['iron_wall', 'harden', 'time_stop','heal','execute'] }
 ];
