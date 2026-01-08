@@ -67,12 +67,30 @@ class Game {
         
         const maxTime = 10000; // 10秒に拡大
 
-        // Header markers
+        // --- Timeline Header Setup ---
+        // ラベル分のスペースを確保
+        const labelSpacer = document.createElement('div');
+        labelSpacer.style.width = '100px'; // .timeline-labelの幅と一致させる
+        labelSpacer.style.flexShrink = '0';
+        header.appendChild(labelSpacer);
+
+        // 数値部分のコンテナ
+        const headerTrack = document.createElement('div');
+        headerTrack.style.flex = '1';
+        headerTrack.style.position = 'relative';
+        headerTrack.style.height = '100%';
+        header.appendChild(headerTrack);
+
+        // Header markers (絶対配置でバーと完全に位置を合わせる)
         for (let i = 0; i <= 10; i++) {
             const span = document.createElement('span');
             span.innerText = `${i}s`;
-            header.appendChild(span);
+            span.style.position = 'absolute';
+            span.style.left = `${(i * 1000 / maxTime) * 100}%`;
+            span.style.transform = 'translateX(-50%)'; // 中央寄せ
+            headerTrack.appendChild(span);
         }
+        // -----------------------------
 
         this.player.skills.forEach((skill, index) => {
             const row = document.createElement('div');
@@ -105,7 +123,7 @@ class Game {
                 currentTime += totalCd;
             }
 
-            // 1秒ごとのマーカー
+            // 1秒ごとのマーカー (ヘッダーと位置を合わせる)
             for (let i = 1; i < 10; i++) {
                 const marker = document.createElement('div');
                 marker.className = 'timeline-marker';
@@ -302,8 +320,9 @@ class Game {
     victory() {
         this.log(`${this.enemy.name} を倒した！`);
         this.player.maxHp += 5;
+        this.player.hp = this.player.maxHp;
         this.player.atk += 2;
-        this.player.sup += 1; // 支援も上昇
+        this.player.sup += 1;
         this.player.def += 1;
         setTimeout(() => this.showRewards(), 1000);
     }
@@ -480,6 +499,7 @@ class Game {
             unit.skills.forEach((s, i) => {
                 const div = document.createElement('div');
                 div.className = 'skill-icon';
+                // 文字とオーバーレイの順序を考慮（CSSのz-indexでも制御していますが、構造としても配置）
                 div.innerHTML = `<span>${s.name}</span><div class="skill-cooldown-overlay"></div>`;
                 div.onmouseenter = () => this.showTooltip(this.getSkillDetail(s));
                 div.onmouseleave = () => this.hideTooltip();
@@ -488,9 +508,11 @@ class Game {
         }
 
         unit.skills.forEach((s, i) => {
+            // オーバーレイ要素を取得
             const overlay = skillContainer.children[i].querySelector('.skill-cooldown-overlay');
             const totalCd = (s.cd || 0) + (s.extraCd || 0);
             const progress = states[i] ? states[i].progress : 0;
+            // progressが0(発動直後)で高さ100%、1(完了)で高さ0%にする
             overlay.style.height = `${(1 - progress) * 100}%`;
         });
     }
