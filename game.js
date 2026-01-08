@@ -198,21 +198,23 @@ class Game {
     drawInventory() {
         const list = document.getElementById('inventory-list');
         list.innerHTML = '';
-        const allRelics = [...this.player.relics, ...this.player.cursedRelics];
 
-        allRelics.forEach(item => {
+        // 1. 通常の遺物を描画（紫色）
+        this.player.relics.forEach(item => {
             const div = document.createElement('div');
-            // クラス名の判定を修正（item.specialの有無などデータ構造に合わせる）
-            const isCurse = item.special && (item.special.selfDmgTick || item.special.healingBan || item.special.cdIncrease);
-            div.className = `inventory-item ${isCurse ? 'curse' : 'relic'}`;
-
-            // 表示名を1文字目ではなく名前に
+            div.className = 'inventory-item relic'; // 固定で relic
             div.innerText = item.name;
+            div.onmouseover = () => this.showTooltip(this.getRelicDetail(item));
+            div.onmouseout = () => this.hideTooltip();
+            list.appendChild(div);
+        });
 
-            div.onmouseover = () => {
-                // 第1引数の e を削除し、テキストのみを渡すように修正
-                this.showTooltip(this.getRelicDetail(item));
-            };
+        // 2. 呪物を描画（赤色）
+        this.player.cursedRelics.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'inventory-item curse'; // 固定で curse
+            div.innerText = item.name;
+            div.onmouseover = () => this.showTooltip(this.getRelicDetail(item));
             div.onmouseout = () => this.hideTooltip();
             list.appendChild(div);
         });
