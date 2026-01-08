@@ -348,7 +348,7 @@ class Game {
 
         // プレイヤー状態リセット
         this.player.shield = 0;
-        this.player.statusEffects = [];
+        this.player.statusEffects = this.player.statusEffects.filter(ef => ef.permanent);
 
         this.initSkillStates();
 
@@ -471,6 +471,8 @@ class Game {
 
     // --- Core Action Logic ---
 
+    // game.js の useSkill メソッドを以下のように修正します
+
     useSkill(side, actor, target, skill) {
         let msg = `${actor.name}の${skill.name}！`;
 
@@ -485,18 +487,17 @@ class Game {
             this.applyStatus(actor, 'debuff', skill.selfDebuff.stat, skill.selfDebuff.amount, skill.duration, '反動');
         }
 
-        // 2. スキルタイプ別処理
-        const stats = this.calcCurrentStats(actor); // バフ込みステータス
+        // 2. 遺物・バフ・デバフ込みの現在ステータスを算出
+        const stats = this.calcCurrentStats(actor);
         const targetStats = this.calcCurrentStats(target);
 
         switch (skill.type) {
             case 'attack':
                 const powerMult = skill.power + ((skill.level - 1) * 0.1);
-                // 攻撃力計算: (Atk * SkillPower) - (TargetDef)
+                // 補正後のatkを使用
                 let rawDmg = (stats.atk * powerMult);
                 let damage = Math.max(1, Math.floor(rawDmg - targetStats.def));
 
-                // ライフスティール
                 const lifesteal = this.checkSpecial(actor, 'lifesteal');
                 if (lifesteal) {
                     const heal = Math.floor(damage * lifesteal);
@@ -506,7 +507,6 @@ class Game {
                     }
                 }
 
-                // 攻撃付随デバフ
                 if (skill.debuff) {
                     this.applyStatus(target, 'debuff', skill.debuff.stat, skill.debuff.amount, skill.debuff.duration, skill.name);
                 }
@@ -516,9 +516,10 @@ class Game {
                 break;
 
             case 'shield':
-                const shieldAmt = skill.power + (stats.sup * 2); // 支援力も影響
+                // 修正：actor.sup ではなく stats.sup (遺物補正込) を使用
+                const shieldAmt = skill.power + (stats.sup * 2);
                 actor.shield = (actor.shield || 0) + shieldAmt;
-                actor.shieldDuration = skill.duration; // シールド効果時間更新
+                actor.shieldDuration = skill.duration;
                 msg += ` シールド${shieldAmt}を展開！`;
                 break;
 
@@ -526,6 +527,7 @@ class Game {
                 if (this.checkSpecial(actor, 'healingBan')) {
                     msg += ` しかし呪いで回復できない！`;
                 } else {
+                    // 修正：actor.sup ではなく stats.sup (遺物補正込) を使用
                     const healAmt = Math.floor((skill.power + stats.sup) * (1 + (skill.level * 0.2)));
                     actor.hp = Math.min(actor.maxHp, actor.hp + healAmt);
                     msg += ` ${healAmt}回復！`;
@@ -536,7 +538,7 @@ class Game {
             case 'buff':
                 const isRegen = skill.effectType === 'regen';
                 const statName = skill.stat ? skill.stat.toUpperCase() : '継続回復';
-                // Regenの場合は type を 'regen' にして applyStatus する
+                // 継続回復(regen)の場合、effectValに支援力(stats.sup)の一部を乗せるなどの調整も可能
                 this.applyStatus(
                     actor,
                     isRegen ? 'regen' : 'buff',
@@ -554,12 +556,12 @@ class Game {
                 break;
 
             case 'dot':
-                // 初撃ダメージ
                 if (skill.power > 0) {
+                    // 修正：補正後のatkを使用
                     let d = Math.max(1, Math.floor((stats.atk * skill.power) - targetStats.def));
                     this.applyDamage(target, d);
                 }
-                // 状態異常付与
+                // 修正：補正後のsupを使用
                 this.applyStatus(target, 'dot', null, skill.effectVal + Math.floor(stats.sup * 0.2), skill.duration, skill.name, skill.effectType);
                 msg += ` ${skill.effectType === 'poison' ? '毒' : '燃焼'}を与えた！`;
                 break;
@@ -615,22 +617,35 @@ class Game {
 
     // 現在のバフ・デバフ込みステータスを計算
     calcCurrentStats(unit) {
+        // 基礎値からスタート
         let atk = unit.atk;
         let def = unit.def;
         let sup = unit.sup;
 
+        // --- 追加：遺物・呪物による常時ステータス補正を加算 ---
+        unit.relics.concat(unit.cursedRelics).forEach(item => {
+            if (item.stats) {
+                if (item.stats.atk) atk += item.stats.atk;
+                if (item.stats.def) def += item.stats.def;
+                if (item.stats.sup) sup += item.stats.sup;
+                // 注: maxHpは獲得時に unit.maxHp 自体を書き換える運用のためここでは計算不要
+            }
+        });
+
+        // バフ・デバフの適用
         unit.statusEffects.forEach(ef => {
-            if (ef.type === 'buff') {
+            if (ef.type === 'buff' || ef.type === 'debuff') {
                 if (ef.stat === 'atk') atk = this.applyStatMod(atk, ef.value);
-                if (ef.stat === 'def') def = this.applyStatMod(def, ef.value);
-                if (ef.stat === 'sup') sup = this.applyStatMod(sup, ef.value);
-            } else if (ef.type === 'debuff') {
-                if (ef.stat === 'atk') atk = this.applyStatMod(atk, ef.value); // 負の値が入ってくる想定、またはここで引く
                 if (ef.stat === 'def') def = this.applyStatMod(def, ef.value);
                 if (ef.stat === 'sup') sup = this.applyStatMod(sup, ef.value);
             }
         });
-        return { atk: Math.max(0, Math.floor(atk)), def: Math.max(0, Math.floor(def)), sup: Math.max(0, Math.floor(sup)) };
+
+        return {
+            atk: Math.max(0, Math.floor(atk)),
+            def: Math.max(0, Math.floor(def)),
+            sup: Math.max(0, Math.floor(sup))
+        };
     }
 
     applyStatMod(base, val) {
@@ -785,31 +800,21 @@ class Game {
     }
 
     applyRelicStats(item) {
-        if (item.stats) {
-            if (item.stats.atk) this.player.atk += item.stats.atk;
-            if (item.stats.def) this.player.def += item.stats.def;
-            if (item.stats.sup) this.player.sup += item.stats.sup;
-            if (item.stats.maxHp) {
-                this.player.maxHp += item.stats.maxHp;
-                this.player.hp += item.stats.maxHp;
-            }
-        }
-
-        // 呪いの特殊効果（毎秒ダメージなど）を状態異常として予約登録
+        // 呪いの特殊効果（毎秒ダメージなど）の予約登録のみ残す
         if (item.special && item.special.selfDmgTick) {
             this.player.statusEffects.push({
                 type: 'curse',
                 special: 'selfDmgTick',
                 value: item.special.selfDmgTick,
                 name: item.name,
-                permanent: true // 戦闘中永続
+                permanent: true
             });
         }
 
+        // 最大HPの割合変化（硝子の大砲など）がある場合は、基礎最大HPを調整
         if (item.statsRaw && item.statsRaw.maxHp) {
-            const newMax = Math.floor(this.player.maxHp * item.statsRaw.maxHp);
-            this.player.maxHp = newMax;
-            this.player.hp = Math.min(this.player.hp, newMax);
+            this.player.maxHp = Math.floor(this.player.maxHp * item.statsRaw.maxHp);
+            this.player.hp = Math.min(this.player.hp, this.player.maxHp);
         }
     }
 
