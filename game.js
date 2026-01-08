@@ -411,16 +411,20 @@ class Game {
         unit.statusEffects.forEach(ef => {
             if (ef.type === 'dot') {
                 const dmg = Math.max(1, ef.value);
+                // ログ出力を追加
+                this.log(`${unit.name}は${ef.name}で${dmg}ダメージ！`);
                 this.applyDirectDamage(unit, dmg, 'dot');
             } else if (ef.type === 'regen') {
-                // 呪物チェック
                 if (this.checkSpecial(unit, 'healingBan')) return;
 
-                // ef.value (skill.effectVal) 分だけ回復
                 const healAmt = ef.value;
                 unit.hp = Math.min(unit.maxHp, unit.hp + healAmt);
+                // ログ出力を追加
+                this.log(`${unit.name}は${ef.name}で${healAmt}回復！`);
                 this.showFloatingText(unit === this.player ? 'player-unit' : 'enemy-unit', healAmt, 'heal');
             } else if (ef.special === 'selfDmgTick') {
+                // 呪物による自傷ダメージのログ
+                this.log(`${unit.name}は${ef.name}の呪いで${ef.value}ダメージ！`);
                 this.applyDirectDamage(unit, ef.value, 'curse');
             }
         });
@@ -606,7 +610,18 @@ class Game {
     applyDirectDamage(target, amount, type) {
         // シールド無視などの特殊ダメージ用
         target.hp -= amount;
+
+        // applyDirectDamage自体にログ出力がない場合を考慮し、ここで必要なら追加できますが、
+        // tickStatusEffects側で詳細な理由（スキル名など）をログに出す方が分かりやすいため、
+        // ここではフローティングテキストのみ維持します。
         this.showFloatingText(target === this.player ? 'player-unit' : 'enemy-unit', amount, 'damage');
+
+        // ダメージ時のシェイク演出を追加（任意）
+        const el = document.getElementById(target === this.player ? 'player-unit' : 'enemy-unit');
+        if (el) {
+            el.classList.add('shake');
+            setTimeout(() => el.classList.remove('shake'), 200);
+        }
     }
 
     // 現在のバフ・デバフ込みステータスを計算
@@ -644,7 +659,7 @@ class Game {
 
     applyStatMod(base, val) {
         // valが小数の場合は倍率(0.5 = +50%, -0.3 = -30%)、整数の場合は固定値加算とみなす簡易ロジック
-        if (Math.abs(val) < 5 && !Number.isInteger(val)) {
+        if (typeof val === 'number') {
             return base * (1 + val);
         }
         return base + val;
