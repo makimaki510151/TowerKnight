@@ -47,7 +47,7 @@ const RELICS = [
     { id: 'warrior_ring', name: '戦士の指輪', stats: { atk: 5, def: 2 }, desc: '攻撃と防御が上昇。' },
     { id: 'light_feather', name: '軽い羽根', stats: { def: 20 }, special: { cdReduc: 50 }, desc: '防御が上がり、全スキルのCTが0.2秒短縮。' },
     { id: 'heavy_gauntlet', name: '重い手甲', stats: { atk: 8, def: 8 }, desc: '攻防が大きく上昇する。' },
-    { id: 'vampire_tooth', name: '吸血の牙', stats: { atk: 3 }, special: { lifesteal: 0.15 }, desc: '攻撃力が上がり、与ダメージの15%を回復。' },
+    { id: 'vampire_tooth', name: '吸血の牙', stats: { atk: 3 }, special: { lifesteal: 0.15 }, desc: '攻撃力が上がり、与ダメージの15%を回復. ' },
     { id: 'scholar_glasses', name: '学者の眼鏡', stats: { sup: 12, atk: 2 }, desc: '支援力と攻撃力が上がる。' },
     { id: 'turtle_shell', name: '亀の甲羅', stats: { def: 12, hp: 20 }, desc: '防御力とHPが上昇する。' },
     { id: 'hero_cloak', name: '勇者のマント', stats: { atk: 15, def: 15, hp: 80 }, desc: '伝説の勇者が纏ったとされるマント。全体的な能力が向上する。' },
@@ -67,29 +67,29 @@ const CURSED_RELICS = [
 
 const ENEMIES = [
     // 序盤
-    { name: 'スライム', hp: 15, atk: 8, def: 2, skills: ['slash'] },
-    { name: '毒バチ', hp: 45, atk: 12, def: 0, skills: ['poison_blade', 'quick_stab'] }, // DoT持ち
-    { name: '甲羅虫', hp: 80, atk: 6, def: 8, skills: ['harden', 'slash'] }, // バフ持ち
+    { name: 'スライム', hp: 15, atk: 8, def: 2, skills: ['slash'], relics: [], cursedRelics: [] },
+    { name: '毒バチ', hp: 45, atk: 12, def: 0, skills: ['poison_blade', 'quick_stab'], relics: [], cursedRelics: [] },
+    { name: '甲羅虫', hp: 80, atk: 6, def: 8, skills: ['harden', 'slash'], relics: ['turtle_shell'], cursedRelics: [] },
 
     // 中盤
-    { name: 'オーク', hp: 150, atk: 15, def: 5, skills: ['heavy_slam', 'intimidate'] }, // デバフ持ち
-    { name: 'アサシン', hp: 100, atk: 20, def: 2, skills: ['quick_stab', 'double_edge', 'poison_blade'] },
-    { name: 'パラディン', hp: 180, atk: 12, def: 12, skills: ['slash', 'iron_wall', 'heal'] }, // シールド・回復
+    { name: 'オーク', hp: 150, atk: 15, def: 5, skills: ['heavy_slam', 'intimidate'], relics: ['warrior_ring'], cursedRelics: [] },
+    { name: 'アサシン', hp: 100, atk: 20, def: 2, skills: ['quick_stab', 'double_edge', 'poison_blade'], relics: ['light_feather'], cursedRelics: [] },
+    { name: 'パラディン', hp: 180, atk: 12, def: 12, skills: ['slash', 'iron_wall', 'heal'], relics: ['heavy_gauntlet'], cursedRelics: [] },
 
     // 終盤
-    { name: 'バーサーカー', hp: 250, atk: 25, def: 5, skills: ['berserk', 'double_edge'] }, // 自己バフ高火力
-    { name: 'カースメイジ', hp: 200, atk: 18, def: 8, skills: ['ignite', 'intimidate', 'break_armor'] }, // DoT & デバフ
-    { name: 'ゴーレム', hp: 400, atk: 30, def: 20, skills: ['heavy_slam', 'iron_wall'] },
+    { name: 'バーサーカー', hp: 250, atk: 25, def: 5, skills: ['berserk', 'double_edge'], relics: [], cursedRelics: ['demon_muscle'] },
+    { name: 'カースメイジ', hp: 200, atk: 18, def: 8, skills: ['ignite', 'intimidate', 'break_armor'], relics: [], cursedRelics: ['cursed_clock'] },
+    { name: 'ゴーレム', hp: 400, atk: 30, def: 20, skills: ['heavy_slam', 'iron_wall'], relics: ['heavy_gauntlet', 'turtle_shell'], cursedRelics: [] },
 
-    { name: 'キマイラ', hp: 600, atk: 35, def: 15, skills: ['slash', 'poison_blade', 'ignite'] }, // 複合属性アタッカー
-    { name: 'デスナイト', hp: 800, atk: 42, def: 25, skills: ['heavy_slam', 'break_armor', 'soul_drain'] }, // 高耐久・吸収持ち
-    { name: '古代の機械竜', hp: 1000, atk: 48, def: 35, skills: ['iron_wall', 'quick_stab', 'heavy_slam'] }, // ドラゴンへの前哨戦
+    { name: 'キマイラ', hp: 600, atk: 35, def: 15, skills: ['slash', 'poison_blade', 'ignite'], relics: ['vampire_tooth'], cursedRelics: [] },
+    { name: 'デスナイト', hp: 800, atk: 42, def: 25, skills: ['heavy_slam', 'break_armor', 'soul_drain'], relics: ['hero_cloak'], cursedRelics: ['sacrifice_pawn'] },
+    { name: '古代の機械竜', hp: 1000, atk: 48, def: 35, skills: ['iron_wall', 'quick_stab', 'heavy_slam'], relics: ['heavy_gauntlet', 'wisdom_orb'], cursedRelics: [] },
 
     // ボス級
-    { name: 'ドラゴン', hp: 1200, atk: 55, def: 25, skills: ['ignite', 'heavy_slam', 'intimidate', 'dragon_breath'] },
-    { name: '魔王', hp: 2000, atk: 60, def: 30, skills: ['execute', 'regen', 'void_compression', 'soul_drain'] },
+    { name: 'ドラゴン', hp: 1200, atk: 55, def: 25, skills: ['ignite', 'heavy_slam', 'intimidate', 'dragon_breath'], relics: ['hero_cloak', 'vampire_tooth'], cursedRelics: [] },
+    { name: '魔王', hp: 2000, atk: 60, def: 30, skills: ['execute', 'regen', 'void_compression', 'soul_drain'], relics: ['hero_cloak', 'wisdom_orb'], cursedRelics: ['berserker_soul'] },
 
     // --- 超高難易度 / エンドコンテンツ ---
-    { name: '時を喰らうもの', hp: 1500, atk: 45, def: 20, skills: ['time_stop', 'quick_stab', 'heavy_slam'] },
-    { name: '境界の守護者', hp: 3000, atk: 50, def: 100, skills: ['iron_wall', 'harden', 'time_stop','heal','execute'] }
+    { name: '時を喰らうもの', hp: 1500, atk: 45, def: 20, skills: ['time_stop', 'quick_stab', 'heavy_slam'], relics: ['light_feather'], cursedRelics: ['cursed_clock'] },
+    { name: '境界の守護者', hp: 3000, atk: 50, def: 100, skills: ['iron_wall', 'harden', 'time_stop','heal','execute'], relics: ['hero_cloak', 'turtle_shell', 'heavy_gauntlet'], cursedRelics: ['sloth_statue'] }
 ];

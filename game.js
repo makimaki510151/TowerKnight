@@ -35,7 +35,6 @@ class Game {
         const tooltip = document.getElementById('tooltip');
         document.addEventListener('mousemove', (e) => {
             if (tooltip.style.display === 'block') {
-                // 画面端の考慮（簡易）
                 let left = e.clientX + 15;
                 if (left + 280 > window.innerWidth) left = e.clientX - 295;
                 tooltip.style.left = left + 'px';
@@ -47,44 +46,17 @@ class Game {
     showTooltip(text) {
         const tooltip = document.getElementById('tooltip');
         if (!tooltip || !text) return;
-
-        // テキストの内容を更新
         tooltip.innerHTML = text;
         tooltip.style.display = 'block';
-
-        // マウスまたはタップの最新座標を取得するイベントリスナーから位置を特定
-        const updatePos = (e) => {
-            const gap = 15;
-            let x = e.clientX + gap;
-            let y = e.clientY + gap;
-
-            // ツールチップ自体のサイズを取得
-            const rect = tooltip.getBoundingClientRect();
-
-            // 右端からはみ出す場合の補正
-            if (x + rect.width > window.innerWidth) {
-                x = window.innerWidth - rect.width - gap;
-            }
-
-            // 下端からはみ出す場合の補正
-            if (y + rect.height > window.innerHeight) {
-                y = window.innerHeight - rect.height - gap;
-            }
-
-            // 負の値（左端・上端）にならないようガード
-            x = Math.max(gap, x);
-            y = Math.max(gap, y);
-
-            tooltip.style.left = x + 'px';
-            tooltip.style.top = y + 'px';
-        };
-
-        // 呼び出し時の現在のマウス位置に合わせるため、一度だけイベントを模倣するか、
-        // mousemove 等のグローバルな位置情報に依存させる必要があります。
-        // 最も確実なのは、イベントが発生した瞬間の座標を使うことですが、
-        // 既存の呼び出し元を変えない場合は window.event を参照します。
         if (window.event) {
-            updatePos(window.event);
+            const gap = 15;
+            let x = window.event.clientX + gap;
+            let y = window.event.clientY + gap;
+            const rect = tooltip.getBoundingClientRect();
+            if (x + rect.width > window.innerWidth) x = window.innerWidth - rect.width - gap;
+            if (y + rect.height > window.innerHeight) y = window.innerHeight - rect.height - gap;
+            tooltip.style.left = Math.max(gap, x) + 'px';
+            tooltip.style.top = Math.max(gap, y) + 'px';
         }
     }
 
@@ -97,7 +69,6 @@ class Game {
         this.showWarehouse();
     }
 
-    // --- Warehouse / Timeline / Inventory (前回と同じだがData反映) ---
     showWarehouse() {
         this.updateUI();
         this.drawTimeline();
@@ -112,7 +83,6 @@ class Game {
         header.innerHTML = '';
         const maxTime = 12000;
 
-        // Header construction
         const labelSpacer = document.createElement('div');
         labelSpacer.style.width = '100px'; labelSpacer.style.flexShrink = '0';
         header.appendChild(labelSpacer);
@@ -131,7 +101,6 @@ class Game {
         this.player.skills.forEach((skill) => {
             const row = document.createElement('div');
             row.className = 'timeline-row';
-
             const top = document.createElement('div');
             top.className = 'timeline-row-top';
             const label = document.createElement('div');
@@ -139,44 +108,35 @@ class Game {
             label.innerText = skill.name;
             label.onmouseenter = () => this.showTooltip(this.getSkillDetail(skill));
             label.onmouseleave = () => this.hideTooltip();
-
             const track = document.createElement('div');
             track.className = 'timeline-track';
-
             const totalCd = this.getSkillCd(skill, this.player);
             const totalDelay = (skill.initialDelay || 0) + (skill.extraDelay || 0);
-
             let currentTime = totalDelay;
             while (currentTime < maxTime) {
                 const bar = document.createElement('div');
                 bar.className = 'timeline-bar';
                 bar.style.width = `2px`;
                 bar.style.left = `${(currentTime / maxTime) * 100}%`;
-                // タイプ別に色を変える
                 if (skill.type === 'shield') bar.style.backgroundColor = 'var(--shield-color)';
                 if (skill.type === 'buff') bar.style.backgroundColor = 'var(--buff-color)';
                 if (skill.type === 'debuff') bar.style.backgroundColor = 'var(--debuff-color)';
                 track.appendChild(bar);
                 currentTime += totalCd;
             }
-
             for (let i = 1; i < 12; i++) {
                 const marker = document.createElement('div');
                 marker.className = 'timeline-marker';
                 marker.style.left = `${(i * 1000 / maxTime) * 100}%`;
                 track.appendChild(marker);
             }
-
             top.appendChild(label);
             top.appendChild(track);
-
-            // Controls
             const controls = document.createElement('div');
             controls.className = 'timeline-controls';
             const ctGroup = this.createControlGroup('CT追加', skill.extraCd, v => { skill.extraCd = v; this.drawTimeline(); });
             const delayGroup = this.createControlGroup('初動追加', skill.extraDelay, v => { skill.extraDelay = v; this.drawTimeline(); });
             controls.append(ctGroup, delayGroup);
-
             row.appendChild(top);
             row.appendChild(controls);
             container.appendChild(row);
@@ -191,12 +151,11 @@ class Game {
         input.type = 'number';
         input.value = val || 0;
         input.step = 100;
-        input.min = 0; // 属性でマイナス入力を制限
+        input.min = 0;
         input.onchange = (e) => {
-            // 入力値を数値化し、0未満なら0に固定
             let newValue = parseInt(e.target.value) || 0;
             if (newValue < 0) newValue = 0;
-            e.target.value = newValue; // 表示側も0に戻す
+            e.target.value = newValue;
             callback(newValue);
         };
         group.appendChild(input);
@@ -206,21 +165,17 @@ class Game {
     drawInventory() {
         const list = document.getElementById('inventory-list');
         list.innerHTML = '';
-
-        // 1. 通常の遺物を描画（紫色）
         this.player.relics.forEach(item => {
             const div = document.createElement('div');
-            div.className = 'inventory-item relic'; // 固定で relic
+            div.className = 'inventory-item relic';
             div.innerText = item.name;
             div.onmouseover = () => this.showTooltip(this.getRelicDetail(item));
             div.onmouseout = () => this.hideTooltip();
             list.appendChild(div);
         });
-
-        // 2. 呪物を描画（赤色）
         this.player.cursedRelics.forEach(item => {
             const div = document.createElement('div');
-            div.className = 'inventory-item curse'; // 固定で curse
+            div.className = 'inventory-item curse';
             div.innerText = item.name;
             div.onmouseover = () => this.showTooltip(this.getRelicDetail(item));
             div.onmouseout = () => this.hideTooltip();
@@ -228,32 +183,24 @@ class Game {
         });
     }
 
-    // game.js 内の getSkillDetail メソッドの修正
-
     getSkillDetail(skill) {
         const totalCd = this.getSkillCd(skill, this.player);
         const totalDelay = (skill.initialDelay || 0) + (skill.extraDelay || 0);
-
         let detail = `<b>${skill.name}</b> (Lv.${skill.level})<br>`;
-
         let desc = "";
         const power = Number(skill.power) || 0;
         const effectVal = Number(skill.effectVal) || 0;
         const duration = Number(skill.duration) || 0;
         const amount = Number(skill.amount) || 0;
-
         switch (skill.type) {
             case 'attack':
                 desc = `${power.toFixed(1)}倍の威力で攻撃します。`;
-                if (skill.lifesteal) {
-                    desc += `<br>追加効果: 与えたダメージの${Math.round(skill.lifesteal * 100)}%を回復します。`;
-                }
+                if (skill.lifesteal) desc += `<br>追加効果: 与えたダメージの${Math.round(skill.lifesteal * 100)}%を回復します。`;
                 if (skill.debuff) {
                     const d = skill.debuff;
                     const dAmount = Math.abs(Number(d.amount) || 0);
-                    const amountText = dAmount + (Number.isInteger(dAmount) ? '' : '');
                     const upDown = d.amount > 0 ? '上昇' : '低下';
-                    desc += `<br>追加効果: 敵の${d.stat.toUpperCase()}を${amountText}${upDown}させます(${(Number(d.duration) || 0) / 1000}秒)。`;
+                    desc += `<br>追加効果: 敵の${d.stat.toUpperCase()}を${dAmount}${upDown}させます(${(Number(d.duration) || 0) / 1000}秒)。`;
                 }
                 break;
             case 'shield':
@@ -279,51 +226,29 @@ class Game {
                 break;
             case 'dot':
                 desc = `${duration / 1000}秒間、毎秒 ${effectVal} (+支援力×0.2) の継続ダメージを与えます。`;
-                if (power > 0) {
-                    desc = `${power.toFixed(1)}倍の攻撃を行い、さらに` + desc;
-                }
+                if (power > 0) desc = `${power.toFixed(1)}倍の攻撃を行い、さらに` + desc;
                 break;
         }
-
         if (skill.selfDmg) desc += `<br><span class="stat-down">【代償】最大HPの${Math.round(skill.selfDmg * 100)}%を消費します。</span>`;
         if (skill.selfDebuff) {
             const sd = skill.selfDebuff;
-            const sdAmount = Math.abs(Math.round(sd.amount * 100));
-            desc += `<br><span class="stat-down">【反動】自身の${sd.stat.toUpperCase()}が${sdAmount}%低下します。</span>`;
+            desc += `<br><span class="stat-down">【反動】自身の${sd.stat.toUpperCase()}が${Math.abs(Math.round(sd.amount * 100))}%低下します。</span>`;
         }
-
-        let specialNotes = "";
-        this.player.relics.concat(this.player.cursedRelics).forEach(relic => {
-            if (relic.special && relic.special.randomDelay) {
-                specialNotes += `<br><span style="color:var(--curse-color)">【${relic.name}】発動時に最大 ${relic.special.randomDelay / 1000}s のランダム遅延が発生。</span>`;
-            }
-        });
-
-        detail += `<span class="detail">${desc}${specialNotes}</span><br>`;
+        detail += `<span class="detail">${desc}</span><br>`;
         detail += `CT: ${(totalCd / 1000).toFixed(1)}s / 初動: ${(totalDelay / 1000).toFixed(1)}s<br>`;
-
         return detail;
     }
 
     getRelicDetail(item) {
         let detail = `<b>${item.name}</b><br>`;
         let effects = [];
-
         if (item.stats) {
             if (item.stats.atk) effects.push(`攻撃力+${item.stats.atk}`);
             if (item.stats.def) effects.push(`防御力+${item.stats.def}`);
             if (item.stats.sup) effects.push(`支援力+${item.stats.sup}`);
             if (item.stats.hp) effects.push(`最大HP+${item.stats.hp}`);
-            if (item.stats.maxHp) effects.push(`最大HP+${item.stats.maxHp}`);
         }
-
-        if (item.statsRaw) {
-            if (item.statsRaw.maxHp) {
-                const percent = Math.round(item.statsRaw.maxHp * 100);
-                effects.push(`最大HP ${percent}%`);
-            }
-        }
-
+        if (item.statsRaw && item.statsRaw.maxHp) effects.push(`最大HP ${Math.round(item.statsRaw.maxHp * 100)}%`);
         if (item.special) {
             if (item.special.selfDmgTick) effects.push(`毎秒${item.special.selfDmgTick}ダメージ`);
             if (item.special.cdReduc) effects.push(`全CT-${(item.special.cdReduc / 1000).toFixed(1)}s`);
@@ -332,40 +257,30 @@ class Game {
             if (item.special.healingBan) effects.push(`回復無効`);
             if (item.special.randomDelay) effects.push(`発動遅延(最大${(item.special.randomDelay / 1000).toFixed(1)}s)`);
             if (item.special.defZero) effects.push(`防御力強制0`);
-            if (item.special.maxHpReduc) {
-                const startHpPercent = Math.round((1 - item.special.maxHpReduc) * 100);
-                effects.push(`開始時HP ${startHpPercent}% (最大HPの${Math.round(item.special.maxHpReduc * 100)}%減少)`);
-            }
+            if (item.special.maxHpReduc) effects.push(`開始時HP ${(1 - item.special.maxHpReduc) * 100}%`);
             if (item.special.cheatDeath) effects.push(`死亡回避(1回)`);
-            if (item.special.breakOnUse) effects.push(`発動時全遺物消滅`);
         }
-
         detail += `<span class="detail">${effects.join(' / ')}</span>`;
         return detail;
     }
 
     getSkillCd(skill, unit) {
         let baseCd = skill.cd + (skill.extraCd || 0);
-        // 遺物によるCD補正
         unit.relics.concat(unit.cursedRelics).forEach(r => {
             if (r.special && r.special.cdReduc) baseCd -= r.special.cdReduc;
             if (r.special && r.special.cdIncrease) baseCd += r.special.cdIncrease;
         });
-        return Math.max(500, baseCd); // 最低0.5秒
+        return Math.max(500, baseCd);
     }
-
-    // --- Battle Logic ---
 
     startFloor() {
         this.battleActive = true;
         this.battleStartTime = performance.now();
-
         document.getElementById('battle-log').innerHTML = '';
         document.getElementById('battle-post-controls').style.display = 'none';
 
         const enemyData = ENEMIES[Math.min(ENEMIES.length - 1, Math.floor((this.floor - 1) / 2))];
         const scale = 1 + (this.floor - 1) * 0.08;
-
         const enemySkills = enemyData.skills.map(id => {
             const base = SKILLS.find(s => s.id === id);
             return base ? { ...base, level: 1, extraCd: 0, extraDelay: 0 } : { id: id, name: id, type: 'attack', power: 1.0, cd: 3000, level: 1 };
@@ -379,7 +294,26 @@ class Game {
             enemySkills
         );
 
-        // 特殊効果：永劫の飢餓 (maxHpReduc)
+        // 敵の遺物・呪物をdata.jsの定義から読み込む
+        if (enemyData.relics) {
+            enemyData.relics.forEach(id => {
+                const relic = RELICS.find(r => r.id === id);
+                if (relic) {
+                    this.enemy.relics.push(JSON.parse(JSON.stringify(relic)));
+                    this.applyRelicStats(relic, this.enemy);
+                }
+            });
+        }
+        if (enemyData.cursedRelics) {
+            enemyData.cursedRelics.forEach(id => {
+                const curse = CURSED_RELICS.find(c => c.id === id);
+                if (curse) {
+                    this.enemy.cursedRelics.push(JSON.parse(JSON.stringify(curse)));
+                    this.applyRelicStats(curse, this.enemy);
+                }
+            });
+        }
+
         const maxHpReduc = this.checkSpecial(this.player, 'maxHpReduc');
         if (maxHpReduc) {
             this.player.hp = Math.floor(this.player.maxHp * (1 - maxHpReduc));
@@ -391,13 +325,14 @@ class Game {
         this.player.shield = 0;
         this.player.statusEffects = this.player.statusEffects.filter(ef => ef.permanent);
         this.initSkillStates();
-
         const enemySkillContainer = document.getElementById('enemy-skills');
         if (enemySkillContainer) enemySkillContainer.innerHTML = '';
-
         this.log(`Floor ${this.floor}: ${this.enemy.name} が現れた！`);
+        if (this.enemy.relics.length > 0 || this.enemy.cursedRelics.length > 0) {
+            const itemNames = [...this.enemy.relics, ...this.enemy.cursedRelics].map(i => i.name).join('、');
+            this.log(`敵は ${itemNames} を装備している！`);
+        }
         this.showScreen('battle-screen');
-
         this.lastTimestamp = 0;
         requestAnimationFrame(this.battleLoop.bind(this));
     }
@@ -416,37 +351,27 @@ class Game {
     battleLoop(timestamp) {
         if (!this.battleActive) return;
         if (!this.lastTimestamp) this.lastTimestamp = timestamp;
-
         const elapsedBattleTime = timestamp - this.battleStartTime;
-        if (elapsedBattleTime > 180000) { // 3分 = 180,000ms
+        if (elapsedBattleTime > 180000) {
             this.log("時間切れ！ 集中力が底を尽きた...");
-            this.player.hp = 0; // プレイヤーのHPを0にして敗北へ
+            this.player.hp = 0;
             this.battleActive = false;
             this.gameOver();
             return;
         }
-
         const delta = timestamp - this.lastTimestamp;
-
-        // 状態異常の更新（1秒ごとにTick処理）
         this.statusTicker += delta;
         if (this.statusTicker >= 1000) {
             this.tickStatusEffects(this.player, 1000);
             this.tickStatusEffects(this.enemy, 1000);
             this.statusTicker = 0;
         }
-
-        // 有効期限切れのエフェクト削除
         this.updateStatusDurations(this.player, delta);
         this.updateStatusDurations(this.enemy, delta);
-
         this.updateSkills('player', timestamp);
         this.updateSkills('enemy', timestamp);
-
         this.updateUI();
-
         this.lastTimestamp = timestamp;
-
         if (this.player.hp <= 0) {
             this.battleActive = false;
             this.gameOver();
@@ -464,24 +389,18 @@ class Game {
                 const dmg = Math.max(1, ef.value);
                 this.log(`${unit.name}は${ef.name}で${dmg}ダメージ！`);
                 this.applyDirectDamage(unit, dmg, 'dot');
-
-                // 追加：DoTダメージに対する吸血処理
-                // unit（ダメージを受けた側）ではない方（actor）がプレイヤーか敵かを判定
                 const actor = unit === this.player ? this.enemy : this.player;
                 const lifesteal = this.checkSpecial(actor, 'lifesteal');
-
                 if (lifesteal && !this.checkSpecial(actor, 'healingBan')) {
                     const healAmt = Math.floor(dmg * lifesteal);
                     if (healAmt > 0) {
                         actor.hp = Math.min(actor.maxHp, actor.hp + healAmt);
-                        const side = actor === this.player ? 'player-unit' : 'enemy-unit';
-                        this.showFloatingText(side, healAmt, 'heal');
+                        this.showFloatingText(actor === this.player ? 'player-unit' : 'enemy-unit', healAmt, 'heal');
                         this.log(`${actor.name}はDoTの吸血により ${healAmt} 回復！`);
                     }
                 }
             } else if (ef.type === 'regen') {
                 if (this.checkSpecial(unit, 'healingBan')) return;
-
                 const healAmt = ef.value;
                 unit.hp = Math.min(unit.maxHp, unit.hp + healAmt);
                 this.log(`${unit.name}は${ef.name}で${healAmt}回復！`);
@@ -496,9 +415,7 @@ class Game {
     updateStatusDurations(unit, delta) {
         unit.statusEffects.forEach(ef => ef.duration -= delta);
         unit.statusEffects = unit.statusEffects.filter(ef => ef.duration > 0 || ef.permanent);
-
-        // シールド自然減衰（オプション：今回は時間経過で消滅するスキル仕様に任せるため、特別な減衰はなし。ただしduration管理はここ）
-        if (unit.shield > 0 && unit.shieldDuration && unit.shieldDuration > 0) {
+        if (unit.shieldDuration > 0) {
             unit.shieldDuration -= delta;
             if (unit.shieldDuration <= 0) unit.shield = 0;
         }
@@ -508,167 +425,97 @@ class Game {
         const unit = side === 'player' ? this.player : this.enemy;
         const target = side === 'player' ? this.enemy : this.player;
         const states = this.skillStates[side];
-
         unit.skills.forEach((skill, i) => {
             const state = states[i];
             const totalCd = this.getSkillCd(skill, unit);
             const elapsed = now - state.lastUsed;
             state.progress = Math.min(1, elapsed / totalCd);
-
             if (elapsed >= totalCd) {
-                // 呪物ランダム遅延
                 const randomDelay = this.checkSpecial(unit, 'randomDelay');
                 if (randomDelay && Math.random() < 0.3) {
-                    // 30%で遅延発生
                     state.lastUsed += Math.random() * randomDelay;
                     return;
                 }
-
                 this.useSkill(side, unit, target, skill);
                 state.lastUsed = now;
             }
         });
     }
 
-    // --- Core Action Logic ---
-
-    // game.js の useSkill メソッドを以下のように修正します
-
     useSkill(side, actor, target, skill) {
         let msg = `${actor.name}の${skill.name}！`;
-
-        // 1. 自傷ダメージ等のコスト処理
         if (skill.selfDmg) {
             const selfDmg = Math.floor(actor.maxHp * skill.selfDmg);
             actor.hp -= selfDmg;
             this.showFloatingText(side === 'player' ? 'player-unit' : 'enemy-unit', selfDmg, 'damage');
             msg += ` 代償に${selfDmg}ダメージ！`;
         }
-        if (skill.selfDebuff) {
-            this.applyStatus(actor, 'debuff', skill.selfDebuff.stat, skill.selfDebuff.amount, skill.duration, '反動');
-        }
-
-        // 2. 遺物・バフ・デバフ込みの現在ステータスを算出
+        if (skill.selfDebuff) this.applyStatus(actor, 'debuff', skill.selfDebuff.stat, skill.selfDebuff.amount, skill.duration, '反動');
         const stats = this.calcCurrentStats(actor);
         const targetStats = this.calcCurrentStats(target);
-
         switch (skill.type) {
             case 'attack':
-                const basePower = Number(skill.power) || 0;
-                const currentLevel = Number(skill.level) || 1;
-                const powerMult = basePower + ((currentLevel - 1) * 0.1);
-
-                let rawDmg = (Number(stats.atk) || 0) * powerMult;
-                let targetDef = Number(targetStats.def) || 0;
-                let damage = Math.max(1, Math.floor(rawDmg - targetDef));
-
-                if (isNaN(damage)) damage = 1;
-
-                // 修正：遺物のライフスティールだけでなく、スキル自体のライフスティールも考慮
-                const relicLifesteal = this.checkSpecial(actor, 'lifesteal') || 0;
-                const skillLifesteal = skill.lifesteal || 0;
-                const totalLifesteal = relicLifesteal + skillLifesteal;
-
-                if (totalLifesteal > 0) {
-                    const heal = Math.floor(damage * totalLifesteal);
+                const powerMult = (Number(skill.power) || 0) + (((Number(skill.level) || 1) - 1) * 0.1);
+                let damage = Math.max(1, Math.floor((Number(stats.atk) || 0) * powerMult - (Number(targetStats.def) || 0)));
+                const lifesteal = (this.checkSpecial(actor, 'lifesteal') || 0) + (skill.lifesteal || 0);
+                if (lifesteal > 0) {
+                    const heal = Math.floor(damage * lifesteal);
                     if (!this.checkSpecial(actor, 'healingBan') && heal > 0) {
                         actor.hp = Math.min(actor.maxHp, actor.hp + heal);
                         this.showFloatingText(side === 'player' ? 'player-unit' : 'enemy-unit', heal, 'heal');
                         this.log(`${actor.name}は攻撃で ${heal} 回復した！`);
                     }
                 }
-
-                if (skill.debuff) {
-                    this.applyStatus(target, 'debuff', skill.debuff.stat, skill.debuff.amount, skill.debuff.duration, skill.name);
-                }
-
+                if (skill.debuff) this.applyStatus(target, 'debuff', skill.debuff.stat, skill.debuff.amount, skill.debuff.duration, skill.name);
                 this.applyDamage(target, damage);
                 msg += ` ${damage}ダメージ！`;
                 break;
-
             case 'shield':
-                // 修正：actor.sup ではなく stats.sup (遺物補正込) を使用
                 const shieldAmt = skill.power + (stats.sup * 2);
                 actor.shield = Math.min(actor.maxHp, (actor.shield || 0) + shieldAmt);
                 actor.shieldDuration = skill.duration;
                 msg += ` シールド${shieldAmt}を展開！`;
                 break;
-
             case 'heal':
-                if (this.checkSpecial(actor, 'healingBan')) {
-                    msg += ` しかし呪いで回復できない！`;
-                } else {
-                    // 修正：powerとlevelを確実に数値として計算
-                    const basePower = Number(skill.power) || 0;
-                    const levelBonus = (Number(skill.level) || 1) * 0.2;
-                    const healAmt = Math.floor((basePower + stats.sup) * (1 + levelBonus));
-
+                if (this.checkSpecial(actor, 'healingBan')) msg += ` しかし呪いで回復できない！`;
+                else {
+                    const healAmt = Math.floor(((Number(skill.power) || 0) + stats.sup) * (1 + (Number(skill.level) || 1) * 0.2));
                     actor.hp = Math.min(actor.maxHp, actor.hp + healAmt);
                     msg += ` ${healAmt}回復！`;
                     this.showFloatingText(side === 'player' ? 'player-unit' : 'enemy-unit', healAmt, 'heal');
                 }
                 break;
-
             case 'buff':
                 const isRegen = skill.effectType === 'regen';
-                const statName = skill.stat ? skill.stat.toUpperCase() : '継続回復';
-                const effectValue = isRegen ? (Number(skill.effectVal) || 0) : (Number(skill.amount) || 0);
-
-                this.applyStatus(
-                    actor,
-                    isRegen ? 'regen' : 'buff',
-                    skill.stat,
-                    effectValue,
-                    skill.duration,
-                    skill.name,
-                    null, // subType
-                    !isRegen // buffかつregenでないなら倍率として扱うフラグ
-                );
-                msg += ` ${statName}付与！`;
+                this.applyStatus(actor, isRegen ? 'regen' : 'buff', skill.stat, isRegen ? (Number(skill.effectVal) || 0) : (Number(skill.amount) || 0), skill.duration, skill.name, null, !isRegen);
+                msg += ` ${skill.stat ? skill.stat.toUpperCase() : '継続回復'}付与！`;
                 break;
-
             case 'debuff':
                 if (skill.stat === 'cd') {
-                    // 敵の全スキルのlastUsedを減らすことで、実質的にCTを増加させる
-                    // 修正：lastUsedを減らすと経過時間(now - lastUsed)が増えてCTが早く終わってしまうため、
-                    // 正しくはlastUsedを増やす（過去に遡るのではなく未来にずらす）必要がある。
-                    const targetStates = this.skillStates[side === 'player' ? 'enemy' : 'player'];
-                    targetStates.forEach(state => {
-                        state.lastUsed += skill.amount;
-                    });
+                    this.skillStates[side === 'player' ? 'enemy' : 'player'].forEach(state => state.lastUsed += skill.amount);
                     msg += ` 敵の全CTを増加！`;
                 } else {
                     this.applyStatus(target, 'debuff', skill.stat, skill.amount, skill.duration, skill.name);
                     msg += ` 敵の${skill.stat.toUpperCase()}低下！`;
                 }
                 break;
-
             case 'dot':
-                if (skill.power > 0) {
-                    let d = Math.max(1, Math.floor((stats.atk * Number(skill.power)) - targetStats.def));
-                    this.applyDamage(target, d);
-                }
-                // 修正：effectValを数値にキャスト
-                const dotBase = Number(skill.effectVal) || 0;
-                this.applyStatus(target, 'dot', null, dotBase + Math.floor(stats.sup * 0.2), skill.duration, skill.name, skill.effectType);
+                if (skill.power > 0) this.applyDamage(target, Math.max(1, Math.floor((stats.atk * Number(skill.power)) - targetStats.def)));
+                this.applyStatus(target, 'dot', null, (Number(skill.effectVal) || 0) + Math.floor(stats.sup * 0.2), skill.duration, skill.name, skill.effectType);
                 msg += ` ${skill.effectType === 'poison' ? '毒' : '燃焼'}を与えた！`;
                 break;
         }
-
         this.log(msg);
     }
 
-    // ステータス適用の汎用関数
     applyStatus(target, type, stat, value, duration, name, subType = null, isPercent = false) {
         const existing = target.statusEffects.find(e => e.name === name && e.type === type);
         if (existing) {
             existing.duration = duration;
             existing.value = value;
-            existing.isPercent = isPercent; // 追加
+            existing.isPercent = isPercent;
         } else {
-            target.statusEffects.push({
-                type, stat, value, duration, name, subType, isPercent // 追加
-            });
+            target.statusEffects.push({ type, stat, value, duration, name, subType, isPercent });
         }
     }
 
@@ -684,16 +531,12 @@ class Game {
                 target.shield = 0;
             }
         }
-
         if (remaining > 0) {
             target.hp -= remaining;
             this.checkDeathPrevention(target);
             this.showFloatingText(target === this.player ? 'player-unit' : 'enemy-unit', remaining, 'damage');
             const el = document.getElementById(target === this.player ? 'player-unit' : 'enemy-unit');
-            if (el) {
-                el.classList.add('shake');
-                setTimeout(() => el.classList.remove('shake'), 200);
-            }
+            if (el) { el.classList.add('shake'); setTimeout(() => el.classList.remove('shake'), 200); }
         }
     }
 
@@ -702,10 +545,7 @@ class Game {
         this.checkDeathPrevention(target);
         this.showFloatingText(target === this.player ? 'player-unit' : 'enemy-unit', amount, 'damage');
         const el = document.getElementById(target === this.player ? 'player-unit' : 'enemy-unit');
-        if (el) {
-            el.classList.add('shake');
-            setTimeout(() => el.classList.remove('shake'), 200);
-        }
+        if (el) { el.classList.add('shake'); setTimeout(() => el.classList.remove('shake'), 200); }
     }
 
     checkDeathPrevention(unit) {
@@ -714,25 +554,18 @@ class Game {
             if (cheatDeath) {
                 unit.hp = 1;
                 this.log(`【身代わりの駒】${unit.name}は踏みとどまった！`);
-
-                // 遺物消滅処理
                 if (this.checkSpecial(unit, 'breakOnUse')) {
                     this.log(`身代わりの駒が砕け散り、全ての遺物を失った...`);
                     unit.relics = [];
                     unit.cursedRelics = [];
-                    // 永続ステータス効果（自傷ダメージ等）もクリア
                     unit.statusEffects = unit.statusEffects.filter(ef => !ef.permanent);
                 }
             }
         }
     }
 
-    // 現在のバフ・デバフ込みステータスを計算
     calcCurrentStats(unit) {
-        let atk = unit.atk;
-        let def = unit.def;
-        let sup = unit.sup;
-
+        let atk = unit.atk, def = unit.def, sup = unit.sup;
         unit.relics.concat(unit.cursedRelics).forEach(item => {
             if (item.stats) {
                 if (item.stats.atk) atk += item.stats.atk;
@@ -740,65 +573,36 @@ class Game {
                 if (item.stats.sup) sup += item.stats.sup;
             }
         });
-
         unit.statusEffects.forEach(ef => {
             if (ef.type === 'buff' || ef.type === 'debuff') {
-                let mod = ef.value;
                 if (ef.isPercent) {
-                    if (ef.stat === 'atk') atk *= (1 + mod);
-                    if (ef.stat === 'def') def *= (1 + mod);
-                    if (ef.stat === 'sup') sup *= (1 + mod);
+                    if (ef.stat === 'atk') atk *= (1 + ef.value);
+                    if (ef.stat === 'def') def *= (1 + ef.value);
+                    if (ef.stat === 'sup') sup *= (1 + ef.value);
                 } else {
-                    if (ef.stat === 'atk') atk += mod;
-                    if (ef.stat === 'def') def += mod;
-                    if (ef.stat === 'sup') sup += mod;
+                    if (ef.stat === 'atk') atk += ef.value;
+                    if (ef.stat === 'def') def += ef.value;
+                    if (ef.stat === 'sup') sup += ef.value;
                 }
             }
         });
-
-        // 特殊効果：狂戦士の魂 (defZero)
-        if (this.checkSpecial(unit, 'defZero')) {
-            def = 0;
-        }
-
-        return {
-            atk: Math.max(0, Math.floor(atk)),
-            def: Math.max(0, Math.floor(def)),
-            sup: Math.max(0, Math.floor(sup))
-        };
-    }
-
-    applyStatMod(base, val) {
-        const numericBase = Number(base) || 0;
-        const numericVal = Number(val) || 0;
-
-        // 小数の場合は倍率、整数の場合は固定値加算
-        if (Math.abs(numericVal) < 2 && numericVal !== 0) {
-            return numericBase * (1 + numericVal);
-        }
-        return numericBase + numericVal;
+        if (this.checkSpecial(unit, 'defZero')) def = 0;
+        return { atk: Math.max(0, Math.floor(atk)), def: Math.max(0, Math.floor(def)), sup: Math.max(0, Math.floor(sup)) };
     }
 
     checkSpecial(unit, key) {
-        // 遺物・呪物の特殊効果チェック
         let val = null;
-        [...unit.relics, ...unit.cursedRelics].forEach(r => {
-            if (r.special && r.special[key] !== undefined) val = r.special[key];
-        });
+        [...unit.relics, ...unit.cursedRelics].forEach(r => { if (r.special && r.special[key] !== undefined) val = r.special[key]; });
         return val;
     }
-
-    // --- UI Update & Utility ---
 
     updateUI() {
         const stats = this.calcCurrentStats(this.player);
         document.getElementById('floor-display').innerText = this.floor;
         document.getElementById('hp-display').innerText = `${Math.ceil(this.player.hp)}/${this.player.maxHp}`;
-        // ステータス表示（バフ込みの色変えたいが今回は数値のみ）
         document.getElementById('atk-display').innerText = stats.atk;
         document.getElementById('sup-display').innerText = stats.sup;
         document.getElementById('def-display').innerText = stats.def;
-
         this.updateUnitUI('player', this.player);
         if (this.enemy) {
             this.updateUnitUI('enemy', this.enemy);
@@ -809,32 +613,20 @@ class Game {
     updateUnitUI(side, unit) {
         const hpPercent = Math.max(0, (unit.hp / unit.maxHp) * 100);
         const shieldPercent = Math.min(100, ((unit.shield || 0) / unit.maxHp) * 100);
-
         const hpFill = document.getElementById(`${side}-hp-fill`);
         const hpText = document.getElementById(`${side}-hp-text`);
-        const shieldBar = document.querySelector(`#${side}-unit .shield-bar`);
-
+        let shieldEl = document.querySelector(`#${side}-unit .shield-bar`);
         if (hpFill) hpFill.style.width = `${hpPercent}%`;
         if (hpText) hpText.innerText = `${Math.ceil(unit.hp)} / ${unit.maxHp}`;
-
-        // シールドバーの制御（動的生成）
-        let shieldEl = shieldBar;
         if (!shieldEl) {
-            const container = document.querySelector(`#${side}-unit .bar-container`);
             shieldEl = document.createElement('div');
             shieldEl.className = 'bar-fill shield-bar';
-            container.appendChild(shieldEl);
+            document.querySelector(`#${side}-unit .bar-container`).appendChild(shieldEl);
         }
         shieldEl.style.width = `${shieldPercent}%`;
-
-        // バフ・デバフ表示
         const nameEl = document.querySelector(`#${side}-unit .unit-name`);
         let statusRow = document.querySelector(`#${side}-unit .status-effects-row`);
-        if (!statusRow) {
-            statusRow = document.createElement('div');
-            statusRow.className = 'status-effects-row';
-            nameEl.after(statusRow);
-        }
+        if (!statusRow) { statusRow = document.createElement('div'); statusRow.className = 'status-effects-row'; nameEl.after(statusRow); }
         statusRow.innerHTML = '';
         unit.statusEffects.forEach(ef => {
             const badge = document.createElement('span');
@@ -842,11 +634,8 @@ class Game {
             badge.innerText = ef.subType || ef.stat || ef.name;
             statusRow.appendChild(badge);
         });
-
-        // スキルCT表示
         const skillContainer = document.getElementById(`${side}-skills`);
         const states = this.skillStates[side];
-
         if (skillContainer.children.length !== unit.skills.length) {
             skillContainer.innerHTML = '';
             unit.skills.forEach((s, i) => {
@@ -858,110 +647,58 @@ class Game {
                 skillContainer.appendChild(div);
             });
         }
-
         unit.skills.forEach((s, i) => {
             const overlay = skillContainer.children[i].querySelector('.skill-cooldown-overlay');
-            const totalCd = this.getSkillCd(s, unit);
-            const progress = states[i] ? states[i].progress : 0;
-            overlay.style.height = `${(1 - progress) * 100}%`;
+            overlay.style.height = `${(1 - (states[i] ? states[i].progress : 0)) * 100}%`;
         });
     }
 
-    // --- Reward Logic (Revised for Trade-offs) ---
-
     victory() {
         this.log(`${this.enemy.name} を倒した！`);
-
         const btn = document.getElementById('battle-confirm-btn');
         const controls = document.getElementById('battle-post-controls');
-
         controls.style.display = 'block';
         btn.innerText = "報酬を受け取る";
         btn.onclick = () => {
-            // ステータスのリセット
             this.player.maxHp += 5;
             this.player.hp = this.player.maxHp;
             this.player.atk += 1;
             this.player.sup += 1;
             this.player.def += 1;
-
-            // 一時的な状態異常とシールドのリセット
             this.player.statusEffects = this.player.statusEffects.filter(ef => ef.permanent);
             this.player.shield = 0;
             this.player.shieldDuration = 0;
-
-            // 表示を即座に更新する
             this.updateUI();
-
             this.showRewards();
         };
-    }
-
-    generateRandomReward() {
-        const r = Math.random();
-        // スキル(60%), 遺物(25%), 呪物(15%)
-        if (r < 0.6) {
-            const skillTemplate = SKILLS[Math.floor(Math.random() * SKILLS.length)];
-            const existing = this.player.skills.find(s => s.id === skillTemplate.id);
-            const skillData = existing ? { ...existing } : { ...skillTemplate, level: 1 };
-            return { type: 'skill', data: skillData, isUpgrade: !!existing };
-        } else if (r < 0.85) {
-            return { type: 'relic', data: RELICS[Math.floor(Math.random() * RELICS.length)] };
-        } else {
-            return { type: 'curse', data: CURSED_RELICS[Math.floor(Math.random() * CURSED_RELICS.length)] };
-        }
     }
 
     claimReward(reward) {
         if (reward.type === 'skill') {
             const existing = this.player.skills.find(s => s.id === reward.data.id);
-            if (existing) {
-                this.showUpgradeModal(existing);
-            } else {
-                if (this.player.skills.length >= 6) {
-                    alert("これ以上技を持てません（未実装：入れ替え機能）"); // 簡易措置
-                    return;
-                }
+            if (existing) this.showUpgradeModal(existing);
+            else {
+                if (this.player.skills.length >= 6) { alert("これ以上技を持てません"); return; }
                 this.player.skills.push({ ...reward.data, level: 1, extraCd: 0, extraDelay: 0 });
                 this.log(`「${reward.data.name}」を習得！`);
                 this.finishRewardStep();
             }
         } else {
             const list = reward.type === 'relic' ? this.player.relics : this.player.cursedRelics;
-            // ユニーク所持制限なしだが、今回は重複OKとする
             const newItem = JSON.parse(JSON.stringify(reward.data));
             list.push(newItem);
-
-            // 呪物等の即時ステータス反映
-            this.applyRelicStats(newItem);
+            this.applyRelicStats(newItem, this.player);
             this.log(`${newItem.name} を入手！`);
             this.finishRewardStep();
         }
     }
 
-    applyRelicStats(item) {
-        // 呪いの特殊効果（毎秒ダメージなど）の予約登録のみ残す
+    applyRelicStats(item, unit) {
         if (item.special && item.special.selfDmgTick) {
-            this.player.statusEffects.push({
-                type: 'curse',
-                special: 'selfDmgTick',
-                value: item.special.selfDmgTick,
-                name: item.name,
-                permanent: true
-            });
+            unit.statusEffects.push({ type: 'curse', special: 'selfDmgTick', value: item.special.selfDmgTick, name: item.name, permanent: true });
         }
-
-        // 遺物のstatsにhpが含まれている場合、maxHpを増加させる
-        if (item.stats && item.stats.hp) {
-            this.player.maxHp += item.stats.hp;
-            this.player.hp += item.stats.hp; // 現在のHPも増加分だけ回復させる
-        }
-
-        // 最大HPの割合変化（硝子の大砲など）がある場合は、基礎最大HPを調整
-        if (item.statsRaw && item.statsRaw.maxHp) {
-            this.player.maxHp = Math.floor(this.player.maxHp * item.statsRaw.maxHp);
-            this.player.hp = Math.min(this.player.hp, this.player.maxHp);
-        }
+        if (item.stats && item.stats.hp) { unit.maxHp += item.stats.hp; unit.hp += item.stats.hp; }
+        if (item.statsRaw && item.statsRaw.maxHp) { unit.maxHp = Math.floor(unit.maxHp * item.statsRaw.maxHp); unit.hp = Math.min(unit.hp, unit.maxHp); }
     }
 
     showUpgradeModal(skill) {
@@ -970,204 +707,116 @@ class Game {
         const options = document.getElementById('upgrade-options');
         document.getElementById('upgrade-title').innerText = `${skill.name} の強化`;
         options.innerHTML = '';
-
         const upgrades = [
             {
                 name: skill.type === 'shield' ? '耐久強化' : (skill.type === 'heal' ? '回復強化' : '威力強化'),
                 desc: (skill.type === 'shield' || skill.type === 'heal' || skill.type === 'dot' || skill.type === 'buff' || skill.type === 'debuff') ? '効果量+20%' : '威力係数+20%',
                 action: () => {
-                    if (skill.type === 'shield' || skill.type === 'heal') {
-                        // 実数値スキルの場合は20%増加
-                        skill.power = Math.floor(Number(skill.power) * 1.2);
-                    } else if (skill.type === 'dot') {
-                        // DoTスキルの場合は直接攻撃係数と継続ダメージの両方を強化
-                        skill.power = Math.round((Number(skill.power) + 0.1) * 10) / 10;
-                        if (skill.effectVal) skill.effectVal = Math.floor(skill.effectVal * 1.2);
-                    } else if (skill.type === 'buff' || skill.type === 'debuff') {
-                        // バフ・デバフスキルの場合は効果量を20%強化
-                        if (skill.amount !== undefined) {
-                            // 修正：バーサーク等の割合バフは+20%（加算）にする
-                            skill.amount = Math.round((skill.amount + 0.2) * 100) / 100;
-                        }
-                        if (skill.effectVal !== undefined) {
-                            skill.effectVal = Math.floor(skill.effectVal * 1.2);
-                        }
-                    } else {
-                        // 通常攻撃スキルの場合は係数を+0.2
-                        skill.power = Math.round((Number(skill.power) + 0.2) * 10) / 10;
-                    }
+                    if (skill.type === 'shield' || skill.type === 'heal') skill.power = Math.floor(Number(skill.power) * 1.2);
+                    else if (skill.type === 'dot') { skill.power = Math.round((Number(skill.power) + 0.1) * 10) / 10; if (skill.effectVal) skill.effectVal = Math.floor(skill.effectVal * 1.2); }
+                    else if (skill.type === 'buff' || skill.type === 'debuff') { if (skill.amount !== undefined) skill.amount = Math.round((skill.amount + 0.2) * 100) / 100; if (skill.effectVal !== undefined) skill.effectVal = Math.floor(skill.effectVal * 1.2); }
+                    else skill.power = Math.round((Number(skill.power) + 0.2) * 10) / 10;
                     skill.level++;
                 }
             },
-            {
-                name: 'CT短縮',
-                desc: 'CT-10%',
-                action: () => {
-                    skill.cd = Math.max(500, Math.floor(skill.cd * 0.9));
-                    skill.level++;
-                }
-            },
+            { name: 'CT短縮', desc: 'CT-10%', action: () => { skill.cd = Math.max(500, Math.floor(skill.cd * 0.9)); skill.level++; } },
         ];
-
-        // 初動遅延短縮（0より大きい場合のみ追加）
-        if (skill.initialDelay && skill.initialDelay > 0) {
-            upgrades.push({
-                name: '初動短縮',
-                desc: '初動遅延-0.1秒',
-                action: () => {
-                    skill.initialDelay = Math.max(0, skill.initialDelay - 100);
-                    skill.level++;
-                }
-            });
-        }
-
-        // シールドやバフなら効果量アップなども
+        if (skill.initialDelay && skill.initialDelay > 0) upgrades.push({ name: '初動短縮', desc: '初動遅延-0.1秒', action: () => { skill.initialDelay = Math.max(0, skill.initialDelay - 100); skill.level++; } });
         if (skill.effectVal) upgrades.push({ name: '効果量強化', desc: '効果量+5', action: () => { skill.effectVal += 5; skill.level++; } });
         if (skill.duration) upgrades.push({ name: '効果時間延長', desc: '時間+1秒', action: () => { skill.duration += 1000; skill.level++; } });
-
         upgrades.forEach(upg => {
             const btn = document.createElement('button');
             btn.className = 'upgrade-btn';
             btn.innerHTML = `<b>${upg.name}</b><br><span style="font-size:0.8em">${upg.desc}</span>`;
-            btn.onclick = () => {
-                upg.action();
-                modal.style.display = 'none';
-                this.log(`${skill.name} を強化した！`);
-                this.finishRewardStep();
-            };
+            btn.onclick = () => { upg.action(); modal.style.display = 'none'; this.log(`${skill.name} を強化した！`); this.finishRewardStep(); };
             options.appendChild(btn);
         });
         modal.style.display = 'flex';
     }
 
-    finishRewardStep() {
-        this.floor++;
-        this.showWarehouse();
-    }
+    finishRewardStep() { this.floor++; this.showWarehouse(); }
 
-    // showRewards, gameover, helper functions... (previous code remains same mostly)
     showRewards() {
+        const rewardScreen = document.getElementById('reward-screen');
         const rewardList = document.getElementById('reward-list');
         rewardList.innerHTML = '';
 
-        // --- 現在の所持品セクション ---
-        const currentItemsDiv = document.createElement('div');
-        currentItemsDiv.className = 'current-assets-section';
-        currentItemsDiv.style.cssText = 'background: rgba(20, 20, 20, 0.8); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #444; text-align: left;';
+        // 現在の所持品セクション
+        const currentAssets = document.createElement('div');
+        currentAssets.className = 'current-assets-section';
+        currentAssets.style.cssText = 'background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px;';
+        
+        let assetsHTML = '<h4 style="margin:0 0 10px 0; color:var(--accent-color); font-size:0.9em;">現在の所持品</h4>';
+        assetsHTML += '<div style="display:flex; flex-direction:column; gap:10px;">';
+        assetsHTML += '<div><b style="color:var(--skill-color); font-size:0.8em;">技</b><div class="asset-tags-container" id="curr-skills"></div></div>';
+        assetsHTML += '<div style="display:flex; gap:20px;">';
+        assetsHTML += '<div style="flex:1;"><b style="color:var(--relic-color); font-size:0.8em;">遺物</b><div class="asset-tags-container" id="curr-relics"></div></div>';
+        assetsHTML += '<div style="flex:1;"><b style="color:var(--curse-color); font-size:0.8em;">呪物</b><div class="asset-tags-container" id="curr-curses"></div></div>';
+        assetsHTML += '</div></div>';
+        currentAssets.innerHTML = assetsHTML;
+        rewardList.appendChild(currentAssets);
 
-        let currentItemsHTML = '<h4 style="margin: 0 0 12px 0; color: var(--accent-color); border-bottom: 1px solid #444; padding-bottom: 5px; font-size: 0.9em; letter-spacing: 0.05em;">現在の所持品 (マウスオーバーで詳細)</h4>';
-        currentItemsHTML += '<div style="display: flex; flex-direction: column; gap: 10px;">';
-
-        // 所持スキル
-        if (this.player.skills.length > 0) {
-            currentItemsHTML += '<div><b style="color: var(--skill-color); font-size: 0.8em; display: block; margin-bottom: 4px;">技 (' + this.player.skills.length + '/6)</b><div class="asset-tags-container" id="current-skills-tags"></div></div>';
-        }
-
-        // 所持遺物・呪物
-        const hasRelics = this.player.relics.length > 0;
-        const hasCurses = this.player.cursedRelics.length > 0;
-        if (hasRelics || hasCurses) {
-            currentItemsHTML += '<div style="display: flex; gap: 15px;">';
-            if (hasRelics) {
-                currentItemsHTML += '<div style="flex: 1;"><b style="color: var(--relic-color); font-size: 0.8em; display: block; margin-bottom: 4px;">遺物</b><div class="asset-tags-container" id="current-relics-tags"></div></div>';
-            }
-            if (hasCurses) {
-                currentItemsHTML += '<div style="flex: 1;"><b style="color: var(--curse-color); font-size: 0.8em; display: block; margin-bottom: 4px;">呪物</b><div class="asset-tags-container" id="current-curses-tags"></div></div>';
-            }
-            currentItemsHTML += '</div>';
-        }
-        currentItemsHTML += '</div>';
-
-        currentItemsDiv.innerHTML = currentItemsHTML;
-        rewardList.appendChild(currentItemsDiv);
-
-        // タグの動的生成とツールチップ紐付け
         const createTag = (text, color, detail) => {
             const span = document.createElement('span');
-            span.style.cssText = `font-size: 0.75em; display: inline-block; background: #2a2a2a; padding: 3px 8px; border-radius: 4px; margin: 2px; border-left: 3px solid ${color}; cursor: help; white-space: nowrap;`;
+            span.style.cssText = `font-size:0.75em; background:#222; padding:2px 6px; border-radius:3px; border-left:3px solid ${color}; cursor:help;`;
             span.innerText = text;
             span.onmouseenter = () => this.showTooltip(detail);
             span.onmouseleave = () => this.hideTooltip();
             return span;
         };
 
-        const skillTags = currentItemsDiv.querySelector('#current-skills-tags');
-        if (skillTags) this.player.skills.forEach(s => skillTags.appendChild(createTag(`${s.name} Lv.${s.level}`, 'var(--skill-color)', this.getSkillDetail(s))));
+        this.player.skills.forEach(s => currentAssets.querySelector('#curr-skills').appendChild(createTag(`${s.name} Lv.${s.level}`, 'var(--skill-color)', this.getSkillDetail(s))));
+        this.player.relics.forEach(r => currentAssets.querySelector('#curr-relics').appendChild(createTag(r.name, 'var(--relic-color)', this.getRelicDetail(r))));
+        this.player.cursedRelics.forEach(c => currentAssets.querySelector('#curr-curses').appendChild(createTag(c.name, 'var(--curse-color)', this.getRelicDetail(c))));
 
-        const relicTags = currentItemsDiv.querySelector('#current-relics-tags');
-        if (relicTags) this.player.relics.forEach(r => relicTags.appendChild(createTag(r.name, 'var(--relic-color)', this.getRelicDetail(r))));
-
-        const curseTags = currentItemsDiv.querySelector('#current-curses-tags');
-        if (curseTags) this.player.cursedRelics.forEach(c => curseTags.appendChild(createTag(c.name, 'var(--curse-color)', this.getRelicDetail(c))));
-
-        // --- 報酬選択セクション ---
-        const rewardsHeaderDiv = document.createElement('div');
-        rewardsHeaderDiv.style.cssText = 'color: var(--accent-color); font-weight: bold; margin-bottom: 12px; font-size: 1.1em; text-shadow: 0 0 10px rgba(255,215,0,0.3);';
-        rewardsHeaderDiv.innerText = '獲得する報酬を選択してください';
-        rewardList.appendChild(rewardsHeaderDiv);
+        // 報酬グリッド
+        const grid = document.createElement('div');
+        grid.className = 'reward-grid';
+        rewardList.appendChild(grid);
 
         const rewards = [];
-        let relicCount = 0;
-        let curseCount = 0;
-        const selectedRewardIds = new Set();
-        const isSkillLimit = this.player.skills.length >= 6;
-
+        const selectedIds = new Set();
         while (rewards.length < 6) {
             const r = Math.random();
             let reward = null;
             if (r < 0.6) {
-                const skillTemplate = SKILLS[Math.floor(Math.random() * SKILLS.length)];
-                if (selectedRewardIds.has(skillTemplate.id)) continue;
-                const existing = this.player.skills.find(s => s.id === skillTemplate.id);
-                if (!existing && isSkillLimit) continue;
-                reward = { type: 'skill', data: existing ? { ...existing } : { ...skillTemplate, level: 1 }, isUpgrade: !!existing };
-                selectedRewardIds.add(skillTemplate.id);
+                const template = SKILLS[Math.floor(Math.random() * SKILLS.length)];
+                if (selectedIds.has(template.id)) continue;
+                const existing = this.player.skills.find(s => s.id === template.id);
+                if (!existing && this.player.skills.length >= 6) continue;
+                reward = { type: 'skill', data: existing ? { ...existing } : { ...template, level: 1 }, isUpgrade: !!existing };
+                selectedIds.add(template.id);
             } else if (r < 0.85) {
-                if (relicCount >= 1) continue;
-                const relicData = RELICS[Math.floor(Math.random() * RELICS.length)];
-                if (selectedRewardIds.has(relicData.id)) continue;
-                reward = { type: 'relic', data: relicData };
-                selectedRewardIds.add(relicData.id);
-                relicCount++;
+                const relic = RELICS[Math.floor(Math.random() * RELICS.length)];
+                if (selectedIds.has(relic.id)) continue;
+                reward = { type: 'relic', data: relic };
+                selectedIds.add(relic.id);
             } else {
-                if (curseCount >= 1) continue;
-                const curseData = CURSED_RELICS[Math.floor(Math.random() * CURSED_RELICS.length)];
-                if (selectedRewardIds.has(curseData.id)) continue;
-                reward = { type: 'curse', data: curseData };
-                selectedRewardIds.add(curseData.id);
-                curseCount++;
+                const curse = CURSED_RELICS[Math.floor(Math.random() * CURSED_RELICS.length)];
+                if (selectedIds.has(curse.id)) continue;
+                reward = { type: 'curse', data: curse };
+                selectedIds.add(curse.id);
             }
             if (reward) rewards.push(reward);
         }
 
-        const itemsContainer = document.createElement('div');
-        itemsContainer.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr; gap: 10px;';
-        rewardList.appendChild(itemsContainer);
-
         rewards.forEach(reward => {
-            const div = document.createElement('div');
-            div.className = 'reward-item';
-            div.style.margin = '0'; // グリッドで管理するためマージンをリセット
-
-            let color = 'var(--skill-color)';
-            let typeLabel = '技';
-            let detail = '';
-
-            if (reward.type === 'relic') { color = 'var(--relic-color)'; typeLabel = '遺物'; detail = this.getRelicDetail(reward.data); }
-            else if (reward.type === 'curse') { color = 'var(--curse-color)'; typeLabel = '呪物'; detail = this.getRelicDetail(reward.data); }
+            const item = document.createElement('div');
+            item.className = 'reward-item';
+            let color = 'var(--skill-color)', label = '技', detail = '';
+            if (reward.type === 'relic') { color = 'var(--relic-color)'; label = '遺物'; detail = this.getRelicDetail(reward.data); }
+            else if (reward.type === 'curse') { color = 'var(--curse-color)'; label = '呪物'; detail = this.getRelicDetail(reward.data); }
             else { detail = this.getSkillDetail(reward.data); }
 
-            div.innerHTML = `
-                <div class="reward-info" style="text-align: left;">
-                    <div class="reward-type" style="color: ${color}; font-size: 0.7em; text-transform: uppercase;">${typeLabel}</div>
-                    <div class="reward-name" style="font-size: 0.95em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${reward.data.name}${reward.isUpgrade ? ' (+)' : ''}</div>
-                </div>
+            item.innerHTML = `
+                <div class="reward-type" style="color:${color}">${label}</div>
+                <div class="reward-name">${reward.data.name}${reward.isUpgrade ? ' (+)' : ''}</div>
+                <div class="reward-desc-short">${reward.type === 'skill' ? '技の習得・強化' : '能力上昇・特殊効果'}</div>
             `;
-
-            div.onclick = () => { this.hideTooltip(); this.claimReward(reward); };
-            div.onmouseenter = () => this.showTooltip(detail);
-            div.onmouseleave = () => this.hideTooltip();
-            itemsContainer.appendChild(div);
+            item.onclick = () => { this.hideTooltip(); this.claimReward(reward); };
+            item.onmouseenter = () => this.showTooltip(detail);
+            item.onmouseleave = () => this.hideTooltip();
+            grid.appendChild(item);
         });
 
         this.showScreen('reward-screen');
@@ -1177,11 +826,8 @@ class Game {
         const log = document.getElementById('battle-log');
         const div = document.createElement('div');
         div.innerText = msg;
-        log.appendChild(div); // appendに変更
-
-        // 最新のログが見えるように末尾へスクロール
+        log.appendChild(div);
         log.scrollTop = log.scrollHeight;
-
         if (log.children.length > 100) log.firstChild.remove();
     }
 
@@ -1192,36 +838,24 @@ class Game {
         const ft = document.createElement('div');
         ft.className = 'floating-text';
         ft.innerText = (type === 'heal' ? '+' : '') + text;
-
         let color = '#fff';
         if (type === 'heal') color = 'var(--skill-color)';
         if (type === 'damage') color = 'var(--hp-color)';
         if (type === 'curse') color = 'var(--curse-color)';
-
-        ft.style.color = color;
-        ft.style.left = `${rect.left + rect.width / 2 + (Math.random() * 40 - 20)}px`;
-        ft.style.top = `${rect.top + 20}px`;
+        ft.style.cssText = `position:fixed; color:${color}; left:${rect.left + rect.width / 2}px; top:${rect.top}px; pointer-events:none; z-index:3000; font-weight:bold; animation: floatUp 1s forwards;`;
         document.body.appendChild(ft);
         setTimeout(() => ft.remove(), 1000);
     }
 
     gameOver() {
         this.log(`あなたは力尽きた...`);
-
         const btn = document.getElementById('battle-confirm-btn');
         const controls = document.getElementById('battle-post-controls');
-
         controls.style.display = 'block';
         btn.innerText = "リザルトを確認";
         btn.onclick = () => {
             const screen = document.getElementById('gameover-screen');
-            screen.innerHTML = `
-                <h1 class="gameover-title">GAME OVER</h1>
-                <div class="gameover-stats">
-                    <span>到達フロア: <b class="stat-value">${this.floor}</b></span>
-                </div>
-                <button onclick="location.reload()" class="main-btn">タイトルへ戻る</button>
-            `;
+            screen.innerHTML = `<h1 class="gameover-title">GAME OVER</h1><div class="gameover-stats"><span>到達フロア: <b class="stat-value">${this.floor}</b></span></div><button onclick="location.reload()" class="main-btn">タイトルへ戻る</button>`;
             this.showScreen('gameover-screen');
         };
     }
@@ -1232,6 +866,4 @@ class Game {
     }
 }
 
-window.onload = () => {
-    window.game = new Game();
-};
+window.onload = () => { window.game = new Game(); };
