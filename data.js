@@ -1,69 +1,73 @@
 /**
  * ==========================================
- * DATA DEFINITIONS (拡張版)
+ * DATA DEFINITIONS (Advanced Mechanics)
  * ==========================================
+ * * 原則：
+ * - 完全上位互換を作らない（威力が高ければCDが長い、自傷がある等）
+ * - 呪物は遺物より強力だが、明確なデメリットを持つ
  */
 
 const SKILLS = [
-    // 攻撃スキル
-    { id: 'slash', name: '斬撃', type: 'attack', power: 1.2, cd: 2000, initialDelay: 500, desc: '標準的な攻撃' },
-    { id: 'quick_stab', name: '速突', type: 'attack', power: 0.7, cd: 1000, initialDelay: 0, desc: '隙の少ない素早い攻撃' },
-    { id: 'heavy_slash', name: '重撃', type: 'attack', power: 2.5, cd: 5000, initialDelay: 1000, desc: '遅いが強力な一撃' },
-    { id: 'double_cut', name: '二連斬り', type: 'attack', power: 0.9, cd: 2500, initialDelay: 200, desc: '手数の多い連撃' },
-    { id: 'execute', name: '処刑', type: 'attack', power: 3.5, cd: 8000, initialDelay: 2000, desc: '非常に重い必殺の一撃' },
-    { id: 'venom_strike', name: '毒牙', type: 'attack', power: 0.8, cd: 3000, initialDelay: 300, desc: '弱毒を含む攻撃' },
-    { id: 'sonic_wave', name: '衝撃波', type: 'attack', power: 1.0, cd: 1500, initialDelay: 0, desc: '発生の早い遠隔攻撃' },
-
-    // 回復・支援スキル
-    { id: 'heal', name: '小回復', type: 'heal', power: 15, cd: 4000, initialDelay: 1000, desc: 'HPを少し回復する' },
-    { id: 'high_heal', name: '大回復', type: 'heal', power: 35, cd: 9000, initialDelay: 2500, desc: 'HPを大きく回復する' },
-    { id: 'regen_prayer', name: '再生の祈り', type: 'heal', power: 10, cd: 2500, initialDelay: 500, desc: 'こまめに回復を行う' },
+    // --- 攻撃系 (Basic Attack Types) ---
+    { id: 'slash', name: '斬撃', type: 'attack', power: 1.0, cd: 2000, initialDelay: 500, desc: '標準的な攻撃。扱いやすい。' },
+    { id: 'quick_stab', name: '速突', type: 'attack', power: 0.6, cd: 1000, initialDelay: 0, desc: '威力は低いが回転率が良い。' },
+    { id: 'heavy_slam', name: '大振撃', type: 'attack', power: 2.5, cd: 4500, initialDelay: 1500, desc: '強力だが隙が大きい一撃。' },
+    { id: 'execute', name: '処刑', type: 'attack', power: 4.0, cd: 8000, initialDelay: 3000, desc: '致命的な一撃を与えるが、準備に時間がかかる。' },
+    { id: 'double_edge', name: '諸刃の剣', type: 'attack', power: 2.0, cd: 2000, initialDelay: 200, selfDmg: 0.1, desc: '高威力・高速だが、自身のHPを10%消費する。' },
     
-    // バフスキル
-    { id: 'shield', name: '防御', type: 'buff', stat: 'def', power: 5, duration: 3000, cd: 6000, initialDelay: 500, desc: '一時的に防御UP' },
-    { id: 'rage', name: '激昂', type: 'buff', stat: 'atk', power: 8, duration: 4000, cd: 8000, initialDelay: 0, desc: '一時的に攻撃UP' },
-    { id: 'focus', name: '集中', type: 'buff', stat: 'sup', power: 5, duration: 5000, cd: 7000, initialDelay: 1000, desc: '一時的に支援力UP' }
+    // --- 防御・シールド系 (Shields) ---
+    { id: 'parry', name: '受け流し', type: 'shield', power: 15, cd: 3000, initialDelay: 0, duration: 1500, desc: '短時間、少量のシールドを展開する。' },
+    { id: 'iron_wall', name: '鉄壁', type: 'shield', power: 50, cd: 10000, initialDelay: 1000, duration: 5000, desc: '長時間、強力なシールドを展開する。' },
+    
+    // --- 継続ダメージ系 (DoT) ---
+    { id: 'poison_blade', name: '毒刃', type: 'dot', effectType: 'poison', power: 0.5, effectVal: 5, duration: 5000, cd: 4000, initialDelay: 500, desc: '斬撃に加え、5秒間継続ダメージを与える。' },
+    { id: 'ignite', name: '点火', type: 'dot', effectType: 'burn', power: 0.2, effectVal: 10, duration: 3000, cd: 6000, initialDelay: 1000, desc: '威力は低いが、短時間で激しい燃焼ダメージを与える。' },
+
+    // --- バフ・デバフ系 (Buffs/Debuffs) ---
+    { id: 'berserk', name: 'バーサーク', type: 'buff', stat: 'atk', amount: 0.5, duration: 5000, cd: 10000, initialDelay: 0, selfDebuff: { stat: 'def', amount: -0.5 }, desc: '5秒間攻撃力が50%上昇するが、防御力が半減する。' },
+    { id: 'harden', name: '硬化', type: 'buff', stat: 'def', amount: 10, duration: 4000, cd: 8000, initialDelay: 500, desc: '一時的に防御力を固定値で上昇させる。' },
+    { id: 'intimidate', name: '威圧', type: 'debuff', stat: 'atk', amount: -0.3, duration: 4000, cd: 9000, initialDelay: 1000, desc: '敵の攻撃力を30%下げる。' },
+    { id: 'break_armor', name: '鎧砕き', type: 'attack', power: 0.8, debuff: { stat: 'def', amount: -5, duration: 5000 }, cd: 5000, initialDelay: 800, desc: '攻撃しつつ、敵の防御力を下げる。' },
+
+    // --- 回復系 (Heal) ---
+    { id: 'heal', name: '応急手当', type: 'heal', power: 20, cd: 5000, initialDelay: 1000, desc: 'HPを中程度回復する。' },
+    { id: 'regen', name: '再生', type: 'buff', effectType: 'regen', effectVal: 5, duration: 8000, cd: 12000, initialDelay: 0, desc: '8秒間、徐々にHPを回復する。' }
 ];
 
 const RELICS = [
-    { id: 'sword_pendant', name: '剣のペンダント', stats: { atk: 5 }, desc: '攻撃力+5' },
-    { id: 'armor_plate', name: '防護プレート', stats: { def: 3 }, desc: '防御力+3' },
-    { id: 'vitality_ring', name: '生命の指輪', stats: { maxHp: 20 }, desc: '最大HP+20' },
-    { id: 'healing_herb', name: '薬草ポーチ', stats: { sup: 4 }, desc: '支援力+4' },
-    { id: 'knights_crest', name: '騎士の紋章', stats: { atk: 3, def: 3 }, desc: '攻撃と防御が少し上昇' },
-    { id: 'giants_belt', name: '巨人のベルト', stats: { maxHp: 50 }, desc: '最大HPが大幅に上昇' },
-    { id: 'assassins_gloves', name: '暗殺者の手袋', stats: { atk: 8, def: -2 }, desc: '攻撃上昇、防御微減' },
-    { id: 'blessed_amulet', name: '祝福のお守り', stats: { sup: 8, maxHp: 10 }, desc: '支援力とHPが上昇' }
+    { id: 'warrior_ring', name: '戦士の指輪', stats: { atk: 3, def: 1 }, desc: '攻撃と防御がわずかに上昇。デメリットなし。' },
+    { id: 'light_feather', name: '軽い羽根', stats: { def: -2 }, special: { cdReduc: 100 }, desc: '防御が下がるが、全スキルのCTが0.1秒短縮。' },
+    { id: 'heavy_gauntlet', name: '重い手甲', stats: { atk: 5, def: 5 }, special: { cdIncrease: 200 }, desc: '攻防が上昇するが、技が重くなる(CT+0.2秒)。' },
+    { id: 'vampire_tooth', name: '吸血の牙', stats: { maxHp: -10 }, special: { lifesteal: 0.1 }, desc: '最大HPが減るが、与ダメージの10%を回復。' },
+    { id: 'scholar_glasses', name: '学者の眼鏡', stats: { sup: 8, atk: -2 }, desc: '支援力が大きく上がるが、物理攻撃力は下がる。' },
+    { id: 'turtle_shell', name: '亀の甲羅', stats: { def: 8, atk: -3 }, desc: '防御特化。攻撃性能は落ちる。' }
 ];
 
 const CURSED_RELICS = [
-    { id: 'blood_blade', name: '血塗られた刃', stats: { atk: 15, maxHp: -20 }, desc: '攻撃力+15 / 最大HP-20' },
-    { id: 'heavy_armor', name: '呪いの重鎧', stats: { def: 10, atk: -5 }, desc: '防御力+10 / 攻撃力-5' },
-    { id: 'glass_heart', name: '硝子の心臓', stats: { sup: 15, maxHp: -30 }, desc: '支援力+15 / 最大HP-30' },
-    { id: 'berserkers_shackles', name: '狂戦士の枷', stats: { atk: 25, def: -10 }, desc: '攻撃力+25 / 防御力-10' },
-    { id: 'withered_branch', name: '枯れた枝', stats: { maxHp: 50, atk: -5, sup: -5 }, desc: 'HP+50 / 攻・支-5' }
+    { id: 'demon_muscle', name: '鬼神の筋肉', stats: { atk: 20 }, special: { selfDmgTick: 2 }, desc: '攻撃力が劇的に上昇するが、毎秒2ダメージ受ける。' },
+    { id: 'glass_cannon', name: '硝子の大砲', stats: { atk: 30 }, statsRaw: { maxHp: 0.5 }, desc: '攻撃力が極大化するが、最大HPが半分になる（適用時）。' },
+    { id: 'cursed_clock', name: '狂った時計', special: { cdReduc: 500, randomDelay: 1000 }, desc: 'CTが0.5秒短縮されるが、発動時にランダムで最大1秒遅延する。' },
+    { id: 'blood_pact', name: '血の契約', stats: { sup: 30 }, special: { healingBan: true }, desc: '支援力が圧倒的になるが、通常回復が無効化される(DoT等は受ける)。' },
+    { id: 'sloth_statue', name: '怠惰の像', stats: { def: 20, maxHp: 50 }, special: { cdIncrease: 1000 }, desc: '耐久力が跳ね上がるが、行動速度が著しく低下する。' }
 ];
 
 const ENEMIES = [
-    { name: 'スライム', hp: 50, atk: 8, def: 2, skills: ['slash'] },
-    { name: 'ラット', hp: 45, atk: 10, def: 1, skills: ['quick_stab'] },
-    { name: 'バット', hp: 40, atk: 9, def: 1, skills: ['sonic_wave'] },
+    // 序盤
+    { name: 'スライム', hp: 60, atk: 8, def: 2, skills: ['slash'] },
+    { name: '毒バチ', hp: 45, atk: 12, def: 0, skills: ['poison_blade', 'quick_stab'] }, // DoT持ち
+    { name: '甲羅虫', hp: 80, atk: 6, def: 8, skills: ['harden', 'slash'] }, // バフ持ち
     
-    { name: 'ゴブリン', hp: 80, atk: 12, def: 4, skills: ['slash', 'quick_stab'] },
-    { name: 'ウルフ', hp: 70, atk: 14, def: 3, skills: ['double_cut'] },
-    { name: 'スケルトン', hp: 90, atk: 11, def: 6, skills: ['slash', 'shield'] },
+    // 中盤
+    { name: 'オーク', hp: 150, atk: 15, def: 5, skills: ['heavy_slam', 'intimidate'] }, // デバフ持ち
+    { name: 'アサシン', hp: 100, atk: 20, def: 2, skills: ['quick_stab', 'double_edge', 'poison_blade'] },
+    { name: 'パラディン', hp: 180, atk: 12, def: 12, skills: ['slash', 'iron_wall', 'heal'] }, // シールド・回復
     
-    { name: 'オーク', hp: 150, atk: 15, def: 8, skills: ['heavy_slash', 'slash'] },
-    { name: 'ヒーラー', hp: 100, atk: 10, def: 5, skills: ['slash', 'heal'] },
-    { name: 'ローグ', hp: 110, atk: 18, def: 3, skills: ['venom_strike', 'quick_stab'] },
-    
-    { name: 'リザードマン', hp: 180, atk: 16, def: 10, skills: ['double_cut', 'shield'] },
-    { name: 'ゴースト', hp: 130, atk: 15, sup: 10, def: 2, skills: ['sonic_wave', 'regen_prayer'] },
-    { name: '魔術師見習い', hp: 120, atk: 20, def: 4, skills: ['sonic_wave', 'rage'] },
+    // 終盤
+    { name: 'バーサーカー', hp: 250, atk: 25, def: 5, skills: ['berserk', 'double_edge'] }, // 自己バフ高火力
+    { name: 'カースメイジ', hp: 200, atk: 18, def: 8, skills: ['ignite', 'intimidate', 'break_armor'] }, // DoT & デバフ
+    { name: 'ゴーレム', hp: 400, atk: 30, def: 20, skills: ['heavy_slam', 'iron_wall'] },
 
-    { name: 'ダークナイト', hp: 250, atk: 20, def: 15, skills: ['heavy_slash', 'shield'] },
-    { name: 'ハイオーク', hp: 300, atk: 22, def: 10, skills: ['execute', 'rage'] },
-    { name: 'アークビショップ', hp: 220, atk: 15, sup: 25, def: 12, skills: ['high_heal', 'sonic_wave'] },
-
-    { name: 'ドラゴン', hp: 500, atk: 30, def: 20, skills: ['execute', 'sonic_wave', 'rage'] }
+    // ボス級
+    { name: 'ドラゴン', hp: 600, atk: 40, def: 15, skills: ['ignite', 'heavy_slam', 'intimidate'] },
+    { name: '魔王', hp: 800, atk: 35, def: 10, skills: ['execute', 'regen', 'shield_curse'] } // shield_curseは仮
 ];

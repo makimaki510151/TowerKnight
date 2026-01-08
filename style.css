@@ -4,11 +4,15 @@
     --text-color: #e0e0e0;
     --accent-color: #f39c12;
     --hp-color: #e74c3c;
+    --shield-color: #3498db; /* シールド色 */
     --mp-color: #3498db;
     --skill-color: #2ecc71;
     --relic-color: #9b59b6;
     --curse-color: #c0392b;
     --timeline-bg: #222;
+    --buff-color: #f1c40f;
+    --debuff-color: #95a5a6;
+    --dot-color: #9b59b6;
 }
 
 body {
@@ -25,7 +29,7 @@ body {
 
 #game-container {
     width: 1000px;
-    height: 700px;
+    height: 750px; /* 情報量が増えたため少し拡大 */
     background-color: var(--panel-color);
     border: 2px solid #444;
     border-radius: 8px;
@@ -114,10 +118,23 @@ body {
     border-radius: 4px;
     font-size: 0.85em;
     border-left: 4px solid #666;
+    display: flex;
+    flex-direction: column;
 }
 
 .inventory-item.relic { border-left-color: var(--relic-color); }
 .inventory-item.curse { border-left-color: var(--curse-color); }
+
+.item-stats {
+    font-size: 0.8em;
+    color: #aaa;
+    margin-top: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.stat-up { color: #2ecc71; }
+.stat-down { color: #e74c3c; }
 
 /* Timeline Visuals */
 .timeline-header {
@@ -139,7 +156,7 @@ body {
 }
 
 .timeline-row-top { display: flex; align-items: center; margin-bottom: 5px; }
-.timeline-label { width: 100px; font-size: 0.85em; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+.timeline-label { width: 100px; font-size: 0.85em; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; cursor: help; }
 
 .timeline-track {
     flex: 1;
@@ -182,11 +199,11 @@ body {
     font-size: 0.9em;
 }
 
-/* Battle Screen Layout Adjustment */
+/* Battle Screen Layout */
 .battle-area {
     display: flex;
     justify-content: space-around;
-    align-items: center;
+    align-items: flex-start; /* 上揃えに変更 */
     padding: 20px 0;
     width: 100%;
 }
@@ -197,28 +214,56 @@ body {
     color: #555;
     font-style: italic;
     text-shadow: 0 0 10px rgba(0,0,0,0.5);
+    align-self: center;
 }
 
 .unit-card {
-    width: 260px;
+    width: 280px;
     text-align: center;
     padding: 20px;
     background: rgba(0,0,0,0.3);
     border-radius: 10px;
     border: 1px solid #555;
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    position: relative;
 }
 
 .unit-name {
     font-size: 1.2em;
     font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
     color: var(--text-color);
 }
 
-.bar-container { width: 100%; height: 12px; background: #444; border-radius: 6px; margin: 5px 0; overflow: hidden; position: relative; }
-.bar-fill { height: 100%; width: 100%; transition: width 0.2s ease-out; }
-.hp-bar { background-color: var(--hp-color); }
+/* ステータスアイコン（バフ・デバフ表示用） */
+.status-effects-row {
+    height: 24px;
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-bottom: 5px;
+}
+.status-badge {
+    font-size: 0.7em;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: #444;
+    color: #fff;
+    display: flex;
+    align-items: center;
+}
+.status-badge.buff { background: rgba(241, 196, 15, 0.3); border: 1px solid var(--buff-color); color: var(--buff-color); }
+.status-badge.debuff { background: rgba(149, 165, 166, 0.3); border: 1px solid var(--debuff-color); color: var(--debuff-color); }
+.status-badge.dot { background: rgba(155, 89, 182, 0.3); border: 1px solid var(--dot-color); color: var(--dot-color); }
+.status-badge.shield { background: rgba(52, 152, 219, 0.3); border: 1px solid var(--shield-color); color: var(--shield-color); }
+
+
+/* HP Bar & Shield */
+.bar-container { width: 100%; height: 16px; background: #444; border-radius: 8px; margin: 5px 0; overflow: hidden; position: relative; }
+.bar-fill { height: 100%; width: 100%; transition: width 0.2s ease-out; position: absolute; left: 0; top: 0; }
+.hp-bar { background-color: var(--hp-color); z-index: 1; }
+/* シールドバーはHPの上に重なるが、半透明または加算で表示 */
+.shield-bar { background-color: var(--shield-color); z-index: 2; opacity: 0.7; width: 0%; box-shadow: 0 0 5px var(--shield-color); }
 
 .skill-slots { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; justify-content: center; }
 
@@ -244,7 +289,6 @@ body {
     text-shadow: 0 0 3px #000;
 }
 
-/* 変更点：transitionを削除してキリッとした動きに */
 .skill-cooldown-overlay {
     position: absolute;
     bottom: 0;
@@ -286,9 +330,11 @@ body {
     position: fixed; background: rgba(0,0,0,0.95); color: white; padding: 12px;
     border-radius: 5px; border: 1px solid #666; font-size: 0.85em; pointer-events: none;
     display: none; z-index: 2000; max-width: 280px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    white-space: pre-wrap;
 }
 .tooltip b { color: var(--accent-color); }
 .tooltip .stat-ref { color: #3498db; font-weight: bold; }
+.tooltip .detail { color: #aaa; margin-top: 5px; display: block; font-style: italic;}
 
 /* Status Bar */
 #status-bar {
@@ -305,5 +351,5 @@ body {
 /* Animations */
 @keyframes damage-shake { 0% { transform: translate(0,0); } 25% { transform: translate(5px, 0); } 50% { transform: translate(-5px, 0); } 75% { transform: translate(5px, 0); } 100% { transform: translate(0,0); } }
 .shake { animation: damage-shake 0.2s; }
-.floating-text { position: absolute; pointer-events: none; font-weight: bold; animation: float-up 1s forwards; z-index: 100; }
-@keyframes float-up { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-50px); } }
+.floating-text { position: absolute; pointer-events: none; font-weight: bold; animation: float-up 1s forwards; z-index: 100; text-shadow: 1px 1px 0 #000; }
+@keyframes float-up { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-40px); } }
