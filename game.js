@@ -763,35 +763,81 @@ class Game {
         const rewardList = document.getElementById('reward-list');
         rewardList.innerHTML = '';
         const rewards = [];
-        for (let i = 0; i < 4; i++) rewards.push(this.generateRandomReward());
+
+        // 出現制限と重複管理用
+        let relicCount = 0;
+        let curseCount = 0;
+        const selectedRewardIds = new Set();
+
+        // 報酬スロットが6個埋まるまでループ
+        while (rewards.length < 6) {
+            const r = Math.random();
+            let reward = null;
+
+            if (r < 0.6) {
+                // スキル：全SKILLSから抽選
+                const skillTemplate = SKILLS[Math.floor(Math.random() * SKILLS.length)];
+                if (selectedRewardIds.has(skillTemplate.id)) continue;
+
+                const existing = this.player.skills.find(s => s.id === skillTemplate.id);
+                reward = {
+                    type: 'skill',
+                    data: existing ? { ...existing } : { ...skillTemplate, level: 1 },
+                    isUpgrade: !!existing
+                };
+                selectedRewardIds.add(skillTemplate.id);
+            } else if (r < 0.85) {
+                // 遺物：最大1つまで
+                if (relicCount >= 1) continue;
+                const relicData = RELICS[Math.floor(Math.random() * RELICS.length)];
+                if (selectedRewardIds.has(relicData.id)) continue;
+
+                reward = { type: 'relic', data: relicData };
+                selectedRewardIds.add(relicData.id);
+                relicCount++;
+            } else {
+                // 呪物：最大1つまで
+                if (curseCount >= 1) continue;
+                const curseData = CURSED_RELICS[Math.floor(Math.random() * CURSED_RELICS.length)];
+                if (selectedRewardIds.has(curseData.id)) continue;
+
+                reward = { type: 'curse', data: curseData };
+                selectedRewardIds.add(curseData.id);
+                curseCount++;
+            }
+
+            if (reward) rewards.push(reward);
+        }
 
         rewards.forEach(reward => {
             const div = document.createElement('div');
             div.className = 'reward-item';
-            let typeLabel = reward.type.toUpperCase();
+
             let color = 'var(--skill-color)';
             if (reward.type === 'relic') color = 'var(--relic-color)';
             if (reward.type === 'curse') color = 'var(--curse-color)';
 
-            let detail = "";
-            if (reward.type === 'skill') {
-                detail = this.getSkillDetail(reward.data);
-            } else {
-                detail = this.getRelicDetail(reward.data);
-            }
+            const detail = reward.type === 'skill' ?
+                this.getSkillDetail(reward.data) :
+                this.getRelicDetail(reward.data);
 
             div.innerHTML = `
-            <div class="reward-info">
-                <div class="reward-type" style="color: ${color}">${typeLabel}</div>
-                <div style="font-weight: bold">${reward.data.name} ${reward.isUpgrade ? '(強化)' : ''}</div>
-                <div style="font-size: 0.8em; color: #aaa">${detail}</div>
-            </div>
-        `;
+                <div class="reward-info">
+                    <div class="reward-type" style="color: ${color}">${reward.type.toUpperCase()}</div>
+                    <div class="reward-name">${reward.data.name} ${reward.isUpgrade ? '(強化)' : ''}</div>
+                    <div class="reward-description">${detail}</div>
+                </div>
+            `;
 
-            // 修正：e => を削除し、detailのみを渡す
+            div.onclick = () => {
+                this.hideTooltip();
+                this.claimReward(reward);
+            };
+
+            // ツールチップ表示用（既存の仕組みを維持）
             div.onmouseenter = () => this.showTooltip(detail);
             div.onmouseleave = () => this.hideTooltip();
-            div.onclick = () => { this.hideTooltip(); this.claimReward(reward); };
+
             rewardList.appendChild(div);
         });
         this.showScreen('reward-screen');

@@ -353,3 +353,68 @@ body {
 .shake { animation: damage-shake 0.2s; }
 .floating-text { position: absolute; pointer-events: none; font-weight: bold; animation: float-up 1s forwards; z-index: 100; text-shadow: 1px 1px 0 #000; }
 @keyframes float-up { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-40px); } }
+.reward-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 横に3個並べる */
+    grid-template-rows: repeat(2, auto);    /* 2行構成 */
+    gap: 15px;
+    padding: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.reward-item {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    min-height: 140px;
+}
+
+.reward-item:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-3px);
+    border-color: var(--accent-color);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+.reward-info {
+    pointer-events: none; /* ホバーイベントを親要素で一括管理するため */
+}
+
+.reward-type {
+    font-size: 0.7rem;
+    font-weight: bold;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.reward-name {
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #fff;
+}
+
+.reward-description {
+    font-size: 0.8rem;
+    color: #bbb;
+    line-height: 1.4;
+    /* 長すぎるテキストを省略する設定 */
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* モバイル対応：画面が狭いときは2列にする */
+@media (max-width: 600px) {
+    .reward-list {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
